@@ -72,7 +72,7 @@
 
 //////////////////////////////////////////////////////////////////////////////////////////
 template <typename PointT>
-void pcl::VoxelGridNearestCentroid<PointT>::applyFilter(PointCloud & output)
+void pcl::VoxelGridNearestCentroid<PointT>::applyFilter(PointCloud & output)//20221201_yuheioshikubo
 {
   // Has the input dataset been set already?
   if (!input_) {
