@@ -282,7 +282,7 @@ public:
   inline void filter(PointCloud & output, bool searchable = false)
   {
     searchable_ = searchable;
-    applyFilter(output);
+    applyFilter(output);//20221201 Maybe change applyFilter yuhei.oshikubo or create new node
 
     voxel_centroids_ = PointCloudPtr(new PointCloud(output));
 

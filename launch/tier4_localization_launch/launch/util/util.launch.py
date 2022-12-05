@@ -45,7 +45,8 @@ def launch_setup(context, *args, **kwargs):
     )
     voxel_grid_downsample_component = ComposableNode(
         package="pointcloud_preprocessor",
-        plugin="pointcloud_preprocessor::VoxelGridDownsampleFilterComponent",
+        #plugin="pointcloud_preprocessor::VoxelGridDownsampleFilterComponent",
+        plugin="pointcloud_preprocessor::VoxelGridCovarianceDownsampleFilterComponent",
         name="voxel_grid_downsample_filter",
         remappings=[
             ("input", "measurement_range/pointcloud"),
