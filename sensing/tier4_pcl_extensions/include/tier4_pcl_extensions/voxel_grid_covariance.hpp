@@ -49,8 +49,8 @@
 #include <boost/random/variate_generator.hpp> // for variate_generator
 
 //////////////////////////////////////////////////////////////////////////////////////////
-template<typename PointT> void
-pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
+template<typename PointT>
+void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
 {
   voxel_centroids_leaf_indices_.clear ();
 
@@ -358,21 +358,35 @@ pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
     
       {
         //20221201 yuhei.oshikubo
-        // std::cerr<<"eigen_val (0, 0):"<<eigen_val (0, 0)<<std::endl;
-        // std::cerr<<"eigen_val (1, 1):"<<eigen_val (1, 1)<<std::endl;
-        // std::cerr<<"eigen_val (2, 2):"<<eigen_val (2, 2)<<std::endl;
-        std::cerr<<"lam1:"<<lam1<<std::endl;
-        std::cerr<<"lam2:"<<lam2<<std::endl;
-        std::cerr<<"lam3:"<<lam3<<std::endl;
-        
+        // std::cerr<<"lam1:"<<lam1<<std::endl;
+        // std::cerr<<"lam2:"<<lam2<<std::endl;
+        // std::cerr<<"lam3:"<<lam3<<std::endl;
         if(d==1 /*Only poles*/ )/*covariance conditions*/   
-        //d==1 /*Only poles*/ 
-        //d==1 || d==2 /*Except for trees*/
-        //d==3 /*Only trees*/ 
         {
         output.back ().x = leaf.centroid[0];
         output.back ().y = leaf.centroid[1];
         output.back ().z = leaf.centroid[2];
+        output.back ().r = 255;
+        output.back ().g = 0;
+        output.back ().b = 0;//red
+        }
+        if(d==2 /*Only plane*/ )/*covariance conditions*/   
+        {
+        output.back ().x = leaf.centroid[0];
+        output.back ().y = leaf.centroid[1];
+        output.back ().z = leaf.centroid[2];
+        output.back ().r = 10;
+        output.back ().g = 255;
+        output.back ().b = 255;//skyblue
+        }
+        if(d==3 /*Only leaves*/ )/*covariance conditions*/   
+        {
+        output.back ().x = leaf.centroid[0];
+        output.back ().y = leaf.centroid[1];
+        output.back ().z = leaf.centroid[2];
+        output.back ().r = 0;
+        output.back ().g = 230;
+        output.back ().b = 88;//green
         }
       }
       else
@@ -478,7 +492,7 @@ pcl::VoxelGridCovariance<PointT>::getAllNeighborsAtPoint(const PointT& reference
 
 //////////////////////////////////////////////////////////////////////////////////////////
 template<typename PointT> void
-pcl::VoxelGridCovariance<PointT>::getDisplayCloud (pcl::PointCloud<PointXYZ>& cell_cloud)
+pcl::VoxelGridCovariance<PointT>::getDisplayCloud (pcl::PointCloud<PointXYZRGB>& cell_cloud)//changed by oshikubo
 {
   cell_cloud.clear ();
 
@@ -512,7 +526,7 @@ pcl::VoxelGridCovariance<PointT>::getDisplayCloud (pcl::PointCloud<PointXYZ>& ce
       {
         rand_point = Eigen::Vector3d (var_nor (), var_nor (), var_nor ());
         dist_point = cell_mean + cholesky_decomp * rand_point;
-        cell_cloud.push_back (PointXYZ (static_cast<float> (dist_point (0)), static_cast<float> (dist_point (1)), static_cast<float> (dist_point (2))));
+        cell_cloud.push_back (PointXYZRGB (static_cast<float> (dist_point (0)), static_cast<float> (dist_point (1)), static_cast<float> (dist_point (2))));//changed by oshikubo
       }
     }
   }

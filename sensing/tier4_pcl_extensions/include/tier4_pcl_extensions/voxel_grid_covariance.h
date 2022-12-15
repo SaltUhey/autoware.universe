@@ -440,7 +440,7 @@ namespace pcl
        * \param[out] cell_cloud a cloud created by sampling the normal distributions of each voxel
        */
       void
-      getDisplayCloud (pcl::PointCloud<PointXYZ>& cell_cloud);
+      getDisplayCloud (pcl::PointCloud<PointXYZRGB>& cell_cloud);//changed by oshikubo
 
       /** \brief Search for the k-nearest occupied voxels for the given query point.
        * \note Only voxels containing a sufficient number of points are used.

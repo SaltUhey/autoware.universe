@@ -79,17 +79,36 @@ void VoxelGridCovarianceDownsampleFilterComponent::filter(
   const PointCloud2ConstPtr & input, const IndicesPtr & /*indices*/, PointCloud2 & output)
 {
   std::scoped_lock lock(mutex_);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_input(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_output(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::fromROSMsg(*input, *pcl_input);
-  pcl_output->points.reserve(pcl_input->points.size());
-  pcl::VoxelGridCovariance<pcl::PointXYZ> filter;
-  filter.setInputCloud(pcl_input);
+  // pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_input(new pcl::PointCloud<pcl::PointXYZ>);
+  // pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_output(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_input_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_output_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::fromROSMsg(*input, *pcl_input_rgb);
+  //pcl_output->points.reserve(pcl_input->points.size());
+  pcl_output_rgb->points.reserve(pcl_input_rgb->points.size());
+  pcl::VoxelGridCovariance<pcl::PointXYZRGB> filter;
+  filter.setInputCloud(pcl_input_rgb);
   // filter.setSaveLeafLayout(true);
   filter.setLeafSize(voxel_size_x_, voxel_size_y_, voxel_size_z_);
-  filter.filter(*pcl_output);
+  filter.filter(*pcl_output_rgb);//I change point cloud color in function "filter.filter"
 
-  pcl::toROSMsg(*pcl_output, output);
+  //20221205 this is trial ,本当は上で色を変えれるようにしたい
+  // pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_output_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
+
+  // for(auto &p: pcl_output->points){
+  //   pcl::PointXYZRGB point_rgb;
+  //   point_rgb.x=p.x;
+  //   point_rgb.y=p.y;
+  //   point_rgb.z=p.z;  
+  //   point_rgb.r=255;
+  //   point_rgb.g=0;
+  //   point_rgb.b=0;
+  //   pcl_output_rgb->push_back(point_rgb);
+  // }
+
+  // // pcl_output_rgb->height=1;
+  // // pcl_output_rgb->width=pcl_output_rgb->points.size();
+  pcl::toROSMsg(*pcl_output_rgb, output);
   output.header = input->header;
 }
 

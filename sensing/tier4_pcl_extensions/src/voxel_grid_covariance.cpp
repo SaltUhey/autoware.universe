@@ -43,7 +43,8 @@
 #include <pcl/impl/instantiate.hpp>
 
 // Instantiations of specific point types
-PCL_INSTANTIATE (VoxelGridCovariance, PCL_XYZ_POINT_TYPES)
+//PCL_INSTANTIATE (VoxelGridCovariance, PCL_XYZ_POINT_TYPES)
+PCL_INSTANTIATE (VoxelGridCovariance, PCL_RGB_POINT_TYPES)
 
 #endif    // PCL_NO_PRECOMPILE
 
