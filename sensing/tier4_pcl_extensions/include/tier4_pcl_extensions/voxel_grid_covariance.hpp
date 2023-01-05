@@ -44,9 +44,11 @@
 #include <Eigen/Cholesky>
 #include <Eigen/Eigenvalues> // for SelfAdjointEigenSolver
 #include <boost/mpl/size.hpp> // for size
-#include <boost/random/mersenne_twister.hpp> // for mt19937
-#include <boost/random/normal_distribution.hpp> // for normal_distribution
-#include <boost/random/variate_generator.hpp> // for variate_generator
+// #include <boost/random/mersenne_twister.hpp> // for mt19937
+// #include <boost/random/normal_distribution.hpp> // for normal_distribution
+// #include <boost/random/variate_generator.hpp> // for variate_generator
+#include <tier4_pcl_extensions/oshikubo_use.hpp>
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 template<typename PointT>
@@ -275,7 +277,21 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
   // Eigen values less than a threshold of max eigen value are inflated to a set fraction of the max eigen value.
   double min_covar_eigvalue;
 
-  for (auto it = leaves_.begin (); it != leaves_.end (); ++it)
+  //initialize 20230105
+  PointCloud output_d1;
+  PointCloud output_d2;
+  PointCloud output_d3;
+  output_d1.height = 1;              
+  output_d1.is_dense = false;                   
+  output_d1.clear ();
+  output_d2.height = 1;              
+  output_d2.is_dense = false;                   
+  output_d2.clear ();
+  output_d3.height = 1;              
+  output_d3.is_dense = false;                   
+  output_d3.clear ();
+
+  for (auto it = leaves_.begin (); it != leaves_.end (); ++it)//この繰り返しを意識する必要あり 20230105
   {
 
     // Normalize the centroid
@@ -296,7 +312,6 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
         leaf_layout_[it->first] = cp++;
 
 
-      //-------------------------------------------------------------------------------------------------------20221201 ↓
       // Single pass covariance calculation
       leaf.cov_ = (leaf.cov_ - pt_sum * leaf.mean_.transpose()) / (leaf.nr_points - 1.0);
 
@@ -335,60 +350,100 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
         leaf.nr_points = -1;
       }
 
-      //------------------------------------------------------------------------------------------------------------------------------　↑
-
       output.push_back (PointT ());
 
       //20221205 HERE Comupute eigenvalue difference features↓---------------
       double lam1,lam2,lam3,s1,s2,s3;
       lam1=eigen_val (2, 2),lam2=eigen_val (1, 1),lam3=eigen_val (0, 0);
-      s1=lam1-lam2,s2=lam2-lam3,s3=lam3;//Adjust lam3?
+      s1=lam1-lam2,s2=lam2-lam3,s3=lam3;
       double evalue_diff_ftrs[4]={0,s1,s2,s3};
       int d=0;
       for(int i=1;i<=3;i++)
       {
         if(evalue_diff_ftrs[i-1]<evalue_diff_ftrs[i]){d=i;}
       }
-
-
-      //----------------------------------------------------------------------
+      //initialize
+      size_d1=0;
+      size_d2=0;
+      size_d3=0;
+      vec_num_output_d1.clear();
+      vec_num_output_d2.clear();
+      vec_num_output_d3.clear();
+      // pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_d1 (new pcl::PointCloud<pcl::PointXYZRGB>);
+      // pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_d2 (new pcl::PointCloud<pcl::PointXYZRGB>);
+      // pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_d3 (new pcl::PointCloud<pcl::PointXYZRGB>);
+      // pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_d1_shfl (new pcl::PointCloud<pcl::PointXYZRGB>);
+      // pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_d2_shfl (new pcl::PointCloud<pcl::PointXYZRGB>);
+      // pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_d3_shfl (new pcl::PointCloud<pcl::PointXYZRGB>);
+      // output_d1.clear();
+      // output_d2.clear();
+      // output_d3.clear();
+      // output_d1_shfl->clear();
+      // output_d2_shfl->clear();
+      // output_d3_shfl->clear();
 
       // Do we need to process all the fields?
       if (!downsample_all_data_)
     
       {
-        //20221201 yuhei.oshikubo
-        // std::cerr<<"lam1:"<<lam1<<std::endl;
-        // std::cerr<<"lam2:"<<lam2<<std::endl;
-        // std::cerr<<"lam3:"<<lam3<<std::endl;
-        if(d==1 /*Only poles*/ )/*covariance conditions*/   
-        {
-        output.back ().x = leaf.centroid[0];
-        output.back ().y = leaf.centroid[1];
-        output.back ().z = leaf.centroid[2];
-        output.back ().r = 255;
-        output.back ().g = 0;
-        output.back ().b = 0;//red
-        }
-        if(d==2 /*Only plane*/ )/*covariance conditions*/   
-        {
-        output.back ().x = leaf.centroid[0];
-        output.back ().y = leaf.centroid[1];
-        output.back ().z = leaf.centroid[2];
-        output.back ().r = 10;
-        output.back ().g = 255;
-        output.back ().b = 255;//skyblue
-        }
-        if(d==3 /*Only leaves*/ )/*covariance conditions*/   
-        {
-        output.back ().x = leaf.centroid[0];
-        output.back ().y = leaf.centroid[1];
-        output.back ().z = leaf.centroid[2];
-        output.back ().r = 0;
-        output.back ().g = 230;
-        output.back ().b = 88;//green
-        }
+          if(d==1 /*Only poles*/ )/*covariance conditions*/   
+          {
+          // output.back ().x = leaf.centroid[0];
+          // output.back ().y = leaf.centroid[1];
+          // output.back ().z = leaf.centroid[2];
+          // output.back ().r = 255;
+          // output.back ().g = 0;
+          // output.back ().b = 0;//red
+
+          output_d1.back ().x = leaf.centroid[0];
+          output_d1.back ().y = leaf.centroid[1];
+          output_d1.back ().z = leaf.centroid[2];
+          output_d1.back ().r = 255;
+          output_d1.back ().g = 0;
+          output_d1.back ().b = 0;//red
+
+          size_d1++;
+          vec_num_output_d1.push_back(size_d3);
+
+          }
+          if(d==2 /*Only plane*/ )/*covariance conditions*/   
+          {
+          // output.back ().x = leaf.centroid[0];
+          // output.back ().y = leaf.centroid[1];
+          // output.back ().z = leaf.centroid[2];
+          // output.back ().r = 10;
+          // output.back ().g = 255;
+          // output.back ().b = 255;//skyblue
+
+          output_d2.back ().x = leaf.centroid[0];
+          output_d2.back ().y = leaf.centroid[1];
+          output_d2.back ().z = leaf.centroid[2];
+          output_d2.back ().r = 255;
+          output_d2.back ().g = 0;
+          output_d2.back ().b = 0;//red
+          vec_num_output_d2.push_back(size_d2);
+          size_d2++;
+          }
+          if(d==3 /*Only leaves*/ )/*covariance conditions*/   
+          {
+          // output.back ().x = leaf.centroid[0];
+          // output.back ().y = leaf.centroid[1];
+          // output.back ().z = leaf.centroid[2];
+          // output.back ().r = 0;
+          // output.back ().g = 230;
+          // output.back ().b = 88;//green
+
+          output_d3.back ().x = leaf.centroid[0];
+          output_d3.back ().y = leaf.centroid[1];
+          output_d3.back ().z = leaf.centroid[2];
+          output_d3.back ().r = 0;
+          output_d3.back ().g = 230;
+          output_d3.back ().b = 88;//green
+          vec_num_output_d3.push_back(size_d3);
+          size_d3++;
+          }
       }
+
       else
       {
         std::cerr<<"else"<<std::endl;
@@ -408,12 +463,83 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
       if (searchable_)
         voxel_centroids_leaf_indices_.push_back (static_cast<int> (it->first));
 
-
-
     }
   }
 
+  //Weighted sampling 20221226 oshikubo------------------↓↓↓↓↓
+  //Shuffle
+  std::random_device seed_gen;
+  std::mt19937 engine(seed_gen());
+  std::shuffle(vec_num_output_d1.begin(), vec_num_output_d1.end(), engine);
+  std::shuffle(vec_num_output_d2.begin(), vec_num_output_d2.end(), engine);
+  std::shuffle(vec_num_output_d3.begin(), vec_num_output_d3.end(), engine);
+  
+  //Select 1500 points by using weighted sampling
+  int count_d1=0;
+  int count_d2=0;
+  int count_d3=0;
+  int iter=0;//iterations
+  while(iter<1500){
+
+    float result =random_float(0.0,1.0);//bring random float value
+
+    if((0<=result)&&(result<0.50)){
+      // output_d1_shfl->back ().x = output_d1->points[vec_num_output_d1[count_d1]].x;
+      // output_d1_shfl->back ().y = output_d1->points[vec_num_output_d1[count_d1]].y;
+      // output_d1_shfl->back ().z = output_d1->points[vec_num_output_d1[count_d1]].y;
+      // output_d1_shfl->back ().r = output_d1->points[vec_num_output_d1[count_d1]].r;
+      // output_d1_shfl->back ().g = output_d1->points[vec_num_output_d1[count_d1]].g;
+      // output_d1_shfl->back ().b = output_d1->points[vec_num_output_d1[count_d1]].b;
+      output.back ().x = output_d1.points[vec_num_output_d1[count_d1]].x;
+      output.back ().y = output_d1.points[vec_num_output_d1[count_d1]].y;
+      output.back ().z = output_d1.points[vec_num_output_d1[count_d1]].z;
+      output.back ().r = output_d1.points[vec_num_output_d1[count_d1]].r;
+      output.back ().g = output_d1.points[vec_num_output_d1[count_d1]].g;
+      output.back ().b = output_d1.points[vec_num_output_d1[count_d1]].b;
+      count_d1++;
+    }
+      
+    else if((0.50<=result)&&(result<0.80)){
+      // output_d2_shfl->back ().x = output_d2->points[vec_num_output_d2[count_d2]].x;
+      // output_d2_shfl->back ().y = output_d2->points[vec_num_output_d2[count_d2]].y;
+      // output_d2_shfl->back ().z = output_d2->points[vec_num_output_d2[count_d2]].y;
+      // output_d2_shfl->back ().r = output_d2->points[vec_num_output_d2[count_d2]].r;
+      // output_d2_shfl->back ().g = output_d2->points[vec_num_output_d2[count_d2]].g;
+      // output_d2_shfl->back ().b = output_d2->points[vec_num_output_d2[count_d2]].b;
+      output.back ().x = output_d2.points[vec_num_output_d2[count_d2]].x;
+      output.back ().y = output_d2.points[vec_num_output_d2[count_d2]].y;
+      output.back ().z = output_d2.points[vec_num_output_d2[count_d2]].z;
+      output.back ().r = output_d2.points[vec_num_output_d2[count_d2]].r;
+      output.back ().g = output_d2.points[vec_num_output_d2[count_d2]].g;
+      output.back ().b = output_d2.points[vec_num_output_d2[count_d2]].b;
+      count_d2++;
+    }
+    
+    else if((0.80<=result)&&(result<=1.0)){
+      // output_d3_shfl->back ().x = output_d3->points[vec_num_output_d3[count_d3]].x;
+      // output_d3_shfl->back ().y = output_d3->points[vec_num_output_d3[count_d3]].y;
+      // output_d3_shfl->back ().z = output_d3->points[vec_num_output_d3[count_d3]].y;
+      // output_d3_shfl->back ().r = output_d3->points[vec_num_output_d3[count_d3]].r;
+      // output_d3_shfl->back ().g = output_d3->points[vec_num_output_d3[count_d3]].g;
+      // output_d3_shfl->back ().b = output_d3->points[vec_num_output_d3[count_d3]].b;
+      output.back ().x = output_d3.points[vec_num_output_d3[count_d3]].x;
+      output.back ().y = output_d3.points[vec_num_output_d3[count_d3]].y;
+      output.back ().z = output_d3.points[vec_num_output_d3[count_d3]].z;
+      output.back ().r = output_d3.points[vec_num_output_d3[count_d3]].r;
+      output.back ().g = output_d3.points[vec_num_output_d3[count_d3]].g;
+      output.back ().b = output_d3.points[vec_num_output_d3[count_d3]].b;
+      count_d3++;
+    }
+    iter++;
+  }
+
+  //Weighted sampling 20221226 oshikubo------------------↑↑↑↑↑
+
+  //Merge PointCloud Here 
+
+
   output.width = output.size ();
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
