@@ -404,15 +404,6 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
           p.g=0;
           p.b=0;
           output_bfr.push_back(p);
-
-          // output_d1.back ().x = leaf.centroid[0];
-          // output_d1.back ().y = leaf.centroid[1];
-          // output_d1.back ().z = leaf.centroid[2];
-          // output_d1.back ().r = 255;
-          // output_d1.back ().g = 0;
-          // output_d1.back ().b = 0;//red
-          
-          //vec_num_output_d1.push_back(size_d1);
           size_d1++;
           vec_num_output_d1.push_back(ctrl_num);
           }
@@ -435,13 +426,6 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
           p.b=255;
           output_bfr.push_back(p);
 
-          // output_d2.back ().x = leaf.centroid[0];
-          // output_d2.back ().y = leaf.centroid[1];
-          // output_d2.back ().z = leaf.centroid[2];
-          // output_d2.back ().r = 10;
-          // output_d2.back ().g = 255;
-          // output_d2.back ().b = 255;
-          //vec_num_output_d2.push_back(size_d2);
           size_d2++;
           vec_num_output_d2.push_back(ctrl_num);
           
@@ -465,13 +449,6 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
           p.b=88;
           output_bfr.push_back(p);
     
-          // output_d3.back ().x = leaf.centroid[0];
-          // output_d3.back ().y = leaf.centroid[1];
-          // output_d3.back ().z = leaf.centroid[2];
-          // output_d3.back ().r = 0;
-          // output_d3.back ().g = 230;
-          // output_d3.back ().b = 88;//green
-          //vec_num_output_d3.push_back(size_d3);
           size_d3++;
           vec_num_output_d3.push_back(ctrl_num);
           
@@ -516,50 +493,23 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
   int count_d3=0;
   int iter=0;//iterations
   output.clear();//
-  std::cerr<<"while 突入"<<std::endl;
   while(iter<2000){
 
-    float result =random_float(0,1);//bring random float value / check ok 
-    //std::cerr<<"result(random_float):"<<result<<std::endl;
+    float result =random_float(0,1);//bring random float value
 
-    if((result<0.30)&&(size_d1>count_d1)){
-      // pcl::PointXYZRGB p;
-      // p.x=output_bfr.points[vec_num_output_d1[count_d1]].x;
-      // p.y=output_bfr.points[vec_num_output_d1[count_d1]].y;
-      // p.z=output_bfr.points[vec_num_output_d1[count_d1]].z;
-      // p.r=255;
-      // p.g=0;
-      // p.b=0;
-      // output.push_back(p);
-
-      //colcon buildは通るが、代入の仕方がだめっぽい
-      output.push_back (PointT ()); //メモリ外アクセスを防ぐ
-      // double xx;
-      // xx=0;
-      // xx=output_bfr.points[vec_num_output_d1[count_d1]].x;
-      //std::cerr<<"あああああああああああ"<<std::endl;
-      //std::cerr<<"xx(output_bfr.points[vec_num_output_d1[count_d1]].x):"<<xx<<std::endl;
+    if((result<0.60)&&(size_d1>count_d1)){
+      output.push_back (PointT ()); //Prevent out-of-memory access
       output.back ().x = output_bfr.points[vec_num_output_d1[count_d1]].x;
       output.back ().y = output_bfr.points[vec_num_output_d1[count_d1]].y;
       output.back ().z = output_bfr.points[vec_num_output_d1[count_d1]].z;
       output.back ().r = 255;
       output.back ().g = 0;
       output.back ().b = 0;
-      //std::cerr<<"いいいいい"<<std::endl;   
       count_d1++;
     }
       
-    else if((0.30<=result)&&(result<0.60)&&(size_d2>count_d2)){
-      // pcl::PointXYZRGB p;
-      // p.x=output_bfr.points[vec_num_output_d2[count_d2]].x;
-      // p.y=output_bfr.points[vec_num_output_d2[count_d2]].y;
-      // p.z=output_bfr.points[vec_num_output_d2[count_d2]].z;
-      // p.r=10;
-      // p.g=255;
-      // p.b=255;
-      // output.push_back(p);
-
-      output.push_back (PointT ()); //メモリ外アクセスを防ぐ
+    else if((0.60<=result)&&(result<0.70)&&(size_d2>count_d2)){
+      output.push_back (PointT ()); //Prevent out-of-memory access
       output.back ().x = output_bfr.points[vec_num_output_d2[count_d2]].x;
       output.back ().y = output_bfr.points[vec_num_output_d2[count_d2]].y;
       output.back ().z = output_bfr.points[vec_num_output_d2[count_d2]].z;
@@ -569,17 +519,8 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
       count_d2++;
     }
     
-    else if((0.60<=result)&&(size_d3>count_d3)){
-      // pcl::PointXYZRGB p;
-      // p.x=output_bfr.points[vec_num_output_d3[count_d3]].x;
-      // p.y=output_bfr.points[vec_num_output_d3[count_d3]].y;
-      // p.z=output_bfr.points[vec_num_output_d3[count_d3]].z;
-      // p.r=0;
-      // p.g=230;
-      // p.b=88;
-      // output.push_back(p);
-
-      output.push_back (PointT ()); //メモリ外アクセスを防ぐ
+    else if((0.70<=result)&&(size_d3>count_d3)){
+      output.push_back (PointT ()); //Prevent out-of-memory access
       output.back ().x = output_bfr.points[vec_num_output_d3[count_d3]].x;
       output.back ().y = output_bfr.points[vec_num_output_d3[count_d3]].y;
       output.back ().z = output_bfr.points[vec_num_output_d3[count_d3]].z;
@@ -591,14 +532,22 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
     
     iter++;
   }
-  std::cerr<<"while 脱出"<<std::endl;
-  // std::cerr<<"output_d1 size:"<<output_d1.size()<<std::endl;
-  // std::cerr<<"output_d2 size:"<<output_d2.size()<<std::endl;
-  // std::cerr<<"output_d3 size:"<<output_d3.size()<<std::endl;
+  int total=size_d1+size_d2+size_d3;
+  float rate_d1=(float)size_d1/(float)total;
+  float rate_d2=(float)size_d2/(float)total;
+  float rate_d3=(float)size_d3/(float)total;
   std::cerr<<"output_bfr size:"<<output_bfr.size()<<std::endl;
-  std::cerr<<"count_d1:"<<count_d1<<std::endl;
-  std::cerr<<"count_d2:"<<count_d2<<std::endl;
-  std::cerr<<"count_d3:"<<count_d3<<std::endl;
+  std::cerr<<"Number of d1 points before weighted down sampling:"<<size_d1<<"(about "<<rate_d1<<"%)"<<std::endl;
+  std::cerr<<"Number of d2 points before weighted down sampling:"<<size_d2<<"(about "<<rate_d2<<"%)"<<std::endl;
+  std::cerr<<"Number of d3 points before weighted down sampling:"<<size_d3<<"(about "<<rate_d3<<"%)"<<std::endl;
+
+  total=count_d1+count_d2+count_d3;
+  rate_d1=(float)count_d1/(float)total;
+  rate_d2=(float)count_d2/(float)total;
+  rate_d3=(float)count_d3/(float)total;
+  std::cerr<<"Number of d1 points after weighted down sampling:"<<"(about "<<rate_d1<<"%)"<<std::endl;
+  std::cerr<<"Number of d2 points after weighted down sampling:"<<"(about "<<rate_d2<<"%)"<<std::endl;
+  std::cerr<<"Number of d3 points after weighted down sampling:"<<"(about "<<rate_d3<<"%)"<<std::endl;
   std::cerr<<"output size:"<<output.size()<<std::endl;
   
   //Weighted sampling 20221226 oshikubo------------------↑↑↑↑↑
