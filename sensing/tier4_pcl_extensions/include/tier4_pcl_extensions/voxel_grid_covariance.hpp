@@ -280,36 +280,26 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
   //initialize 20230105
   int ctrl_num =0;
   
-  // PointCloud output_d1;
-  // PointCloud output_d2;
-  // PointCloud output_d3;
   pcl::PointCloud<pcl::PointXYZRGB> output_bfr;
-  //pcl::PointCloud<pcl::PointXYZRGB> output_afr;
-  // output_d1.height = 1;              
-  // output_d1.is_dense = true;                   
-  // output_d1.clear ();
-  // output_d2.height = 1;              
-  // output_d2.is_dense = true;                   
-  // output_d2.clear ();
-  // output_d3.height = 1;              
-  // output_d3.is_dense = true;                   
-  // output_d3.clear ();
   output_bfr.height = 1;              
   output_bfr.is_dense = true;                   
   output_bfr.clear ();
-  // output_afr.height = 1;              
-  // output_afr.is_dense = true;                   
-  // output_afr.clear ();
 
-  int size_d1=0;
-  int size_d2=0;
-  int size_d3=0;
-  std::vector<int> vec_num_output_d1;
-  std::vector<int> vec_num_output_d2;
-  std::vector<int> vec_num_output_d3;
-  vec_num_output_d1.clear();
-  vec_num_output_d2.clear();
-  vec_num_output_d3.clear();
+  int size_pl=0;
+  int size_grd=0;
+  int size_bld=0;
+  int size_tr=0;
+  int size_rst=0;
+  std::vector<int> vec_num_output_pl;
+  std::vector<int> vec_num_output_grd;
+  std::vector<int> vec_num_output_bld;
+  std::vector<int> vec_num_output_tr;
+  std::vector<int> vec_num_output_rst;
+  vec_num_output_pl.clear();
+  vec_num_output_grd.clear();
+  vec_num_output_bld.clear();
+  vec_num_output_tr.clear();
+  vec_num_output_rst.clear();
 
   for (auto it = leaves_.begin (); it != leaves_.end (); ++it)//この繰り返しを意識する必要あり
   {
@@ -370,7 +360,7 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
         leaf.nr_points = -1;
       }
 
-      output.push_back (PointT ()); //20230105 重み付きダウンサンプリングのときはcomment out
+      //output.push_back (PointT ()); //20230105 When you use weighted down sampling, please comment out this line
 
       //20221205 HERE Comupute eigenvalue difference features↓---------------
       double lam1,lam2,lam3,s1,s2,s3;
@@ -384,7 +374,6 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
       }
       
       //-----↓20230207 considering normal direction
-      //definition
       Eigen::Vector4f plane_parameters;
       float curvature;
       Eigen::Matrix3f cov_f;
@@ -403,18 +392,13 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
       // std::cerr<<"a:"<< a <<", b:"<<b<<", c:"<<c<<std::endl;
 
       std::vector<float> H {a,b,c};
-      // std::vector<float> X {1.0f,0.0f,0.0f};
       std::vector<float> Z {0.0f,0.0f,1.0f};
-      float H_abs,Z_abs;//float H_abs,X_abs;
+      float H_abs,Z_abs;
       H_abs=sqrt(a*a+b*b+c*c);
-      // X_abs=1.0f;
       Z_abs=1.0f;
+      float inner_pro = H[2]*Z[2];//Z[0],Z[1]は0なので省略
 
-      // float inner_pro = H[0]*X[0];//X[1],X[2]は0なので省略
-      float inner_pro = H[2]*Z[2];
-
-      //x軸と平面（共分散行列）のなす角度の計算
-      // float rad_pla =acos(inner_pro/(H_abs*X_abs));//output:theta[rad](0〜3.14)
+      //Z axisとplane（共分散行列）のなす角度の計算
       float rad_pla =acos(inner_pro/(H_abs*Z_abs));//output:theta[rad](0〜3.14)
       // std::cerr<<"inner_pro:"<< inner_pro <<", rad_pla:"<<rad_pla<<std::endl;
       //-----↑
@@ -423,92 +407,112 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
       // Do we need to process all the fields?
       if (!downsample_all_data_)
       {
-          // if(rad_pla>3.0 || rad_pla<0.1 /*Flat plane(building)*/ )
           if(rad_pla<=1.745 && rad_pla>=1.396/*Flat plane(building)*/)
           {
-          output.back ().x = leaf.centroid[0];
-          output.back ().y = leaf.centroid[1];
-          output.back ().z = leaf.centroid[2];
-          output.back ().r = 255;
-          output.back ().g = 143;
-          output.back ().b = 31;//orange
+          // output.back ().x = leaf.centroid[0];
+          // output.back ().y = leaf.centroid[1];
+          // output.back ().z = leaf.centroid[2];
+          // output.back ().r = 255;
+          // output.back ().g = 143;
+          // output.back ().b = 31;//orange
 
-          // pcl::PointXYZRGB p;
-          // p.x=leaf.centroid[0];
-          // p.y=leaf.centroid[1];
-          // p.z=leaf.centroid[2];
-          // p.r=255;
-          // p.g=0;
-          // p.b=0;
-          // output_bfr.push_back(p);
+          pcl::PointXYZRGB p;
+          p.x=leaf.centroid[0];
+          p.y=leaf.centroid[1];
+          p.z=leaf.centroid[2];
+          p.r=255;
+          p.g=143;
+          p.b=31;
+          output_bfr.push_back(p);
 
-          size_d1++;
-          vec_num_output_d1.push_back(ctrl_num);
+          size_bld++;
+          vec_num_output_bld.push_back(ctrl_num);
           }
      
-          // else if(rad_pla<=1.745 && rad_pla>=1.396 /*Flat ground*/ )
           else if(rad_pla>3.0 || rad_pla<0.1 /*Flat ground*/ )
           {
-          output.back ().x = leaf.centroid[0];
-          output.back ().y = leaf.centroid[1];
-          output.back ().z = leaf.centroid[2];
-          output.back ().r = 0;
-          output.back ().g = 128;
-          output.back ().b = 255;//blue
+          // output.back ().x = leaf.centroid[0];
+          // output.back ().y = leaf.centroid[1];
+          // output.back ().z = leaf.centroid[2];
+          // output.back ().r = 0;
+          // output.back ().g = 128;
+          // output.back ().b = 255;//blue
 
-          // pcl::PointXYZRGB p;
-          // p.x=leaf.centroid[0];
-          // p.y=leaf.centroid[1];
-          // p.z=leaf.centroid[2];
-          // p.r=10;
-          // p.g=255;
-          // p.b=255;
-          // output_bfr.push_back(p);
+          pcl::PointXYZRGB p;
+          p.x=leaf.centroid[0];
+          p.y=leaf.centroid[1];
+          p.z=leaf.centroid[2];
+          p.r=0;
+          p.g=128;
+          p.b=255;
+          output_bfr.push_back(p);
 
-          size_d2++;
-          vec_num_output_d2.push_back(ctrl_num);
-          
+          size_grd++;
+          vec_num_output_grd.push_back(ctrl_num);
           }
           else if(d==1 /*Only poles*/) {
-            output.back ().x = leaf.centroid[0];
-            output.back ().y = leaf.centroid[1];
-            output.back ().z = leaf.centroid[2];
-            output.back ().r = 255;
-            output.back ().g = 0;
-            output.back ().b = 0;
+            // output.back ().x = leaf.centroid[0];
+            // output.back ().y = leaf.centroid[1];
+            // output.back ().z = leaf.centroid[2];
+            // output.back ().r = 255;
+            // output.back ().g = 0;
+            // output.back ().b = 0;
+
+            pcl::PointXYZRGB p;
+            p.x=leaf.centroid[0];
+            p.y=leaf.centroid[1];
+            p.z=leaf.centroid[2];
+            p.r=255;
+            p.g=0;
+            p.b=0;
+            output_bfr.push_back(p);
+
+            size_pl++;
+            vec_num_output_pl.push_back(ctrl_num);
           }
 
           else if(d==3 /*Tree(?)*/) {
-            output.back ().x = leaf.centroid[0];
-            output.back ().y = leaf.centroid[1];
-            output.back ().z = leaf.centroid[2];
-            output.back ().r = 102;
-            output.back ().g = 255;
-            output.back ().b = 51;
+            // output.back ().x = leaf.centroid[0];
+            // output.back ().y = leaf.centroid[1];
+            // output.back ().z = leaf.centroid[2];
+            // output.back ().r = 102;
+            // output.back ().g = 255;
+            // output.back ().b = 51;
+
+            pcl::PointXYZRGB p;
+            p.x=leaf.centroid[0];
+            p.y=leaf.centroid[1];
+            p.z=leaf.centroid[2];
+            p.r=102;
+            p.g=255;
+            p.b=51;
+            output_bfr.push_back(p);
+
+            size_tr++;
+            vec_num_output_tr.push_back(ctrl_num);
           }
 
           // else if(d==3 /*Only leaves*/ )/*covariance conditions*/
           else/*the rest*/ 
           {
-          output.back ().x = leaf.centroid[0];
-          output.back ().y = leaf.centroid[1];
-          output.back ().z = leaf.centroid[2];
-          output.back ().r = 255;
-          output.back ().g = 255;
-          output.back ().b = 31;//yellow
+          // output.back ().x = leaf.centroid[0];
+          // output.back ().y = leaf.centroid[1];
+          // output.back ().z = leaf.centroid[2];
+          // output.back ().r = 255;
+          // output.back ().g = 255;
+          // output.back ().b = 31;//yellow
 
-          // pcl::PointXYZRGB p;
-          // p.x=leaf.centroid[0];
-          // p.y=leaf.centroid[1];
-          // p.z=leaf.centroid[2];
-          // p.r=0;
-          // p.g=230;
-          // p.b=88;
-          // output_bfr.push_back(p);
+          pcl::PointXYZRGB p;
+          p.x=leaf.centroid[0];
+          p.y=leaf.centroid[1];
+          p.z=leaf.centroid[2];
+          p.r=255;
+          p.g=255;
+          p.b=31;
+          output_bfr.push_back(p);
     
-          size_d3++;
-          vec_num_output_d3.push_back(ctrl_num);
-          
+          size_rst++;
+          vec_num_output_rst.push_back(ctrl_num);
           }
           ctrl_num++;
       }
@@ -535,81 +539,112 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
     }
   }
 
-  //Weighted sampling 20221226 oshikubo------------------↓↓↓↓↓
-  // output_bfr.width = output_bfr.size ();
-  // //Shuffle
-  // std::random_device seed_gen;
-  // std::mt19937 engine(seed_gen());
-  // std::shuffle(vec_num_output_d1.begin(), vec_num_output_d1.end(), engine);
-  // std::shuffle(vec_num_output_d2.begin(), vec_num_output_d2.end(), engine);
-  // std::shuffle(vec_num_output_d3.begin(), vec_num_output_d3.end(), engine);
+  //Weighted sampling oshikubo------------------↓↓↓↓↓
+  output_bfr.width = output_bfr.size();
+  //Shuffle
+  std::random_device seed_gen;
+  std::mt19937 engine(seed_gen());
+  std::shuffle(vec_num_output_pl.begin(), vec_num_output_pl.end(), engine);
+  std::shuffle(vec_num_output_grd.begin(), vec_num_output_grd.end(), engine);
+  std::shuffle(vec_num_output_bld.begin(), vec_num_output_bld.end(), engine);
+  std::shuffle(vec_num_output_tr.begin(), vec_num_output_tr.end(), engine);
+  std::shuffle(vec_num_output_rst.begin(), vec_num_output_rst.end(), engine);
   
-  // //Select  points by using weighted sampling
-  // int count_d1=0;
-  // int count_d2=0;
-  // int count_d3=0;
-  // int iter=0;//iterations
-  // output.clear();//
-  // while(iter<2000){
+  //Select  points by using weighted sampling
+  int cnt_pl=0;
+  int cnt_grd=0;
+  int cnt_bld=0;
+  int cnt_tr=0;
+  int cnt_rst=0;
+  int iter=0;//iterations
+  output.clear();//
+  while(iter<2000){
+    float result =random_float(0,1);//bring random float value
 
-  //   float result =random_float(0,1);//bring random float value
-
-  //   if((result<0.60)&&(size_d1>count_d1)){
-  //     output.push_back (PointT ()); //Prevent out-of-memory access
-  //     output.back ().x = output_bfr.points[vec_num_output_d1[count_d1]].x;
-  //     output.back ().y = output_bfr.points[vec_num_output_d1[count_d1]].y;
-  //     output.back ().z = output_bfr.points[vec_num_output_d1[count_d1]].z;
-  //     output.back ().r = 255;
-  //     output.back ().g = 0;
-  //     output.back ().b = 0;
-  //     count_d1++;
-  //   }
+    if((result<0.30)&&(size_pl>cnt_pl)){
+      output.push_back (PointT ()); //Prevent out-of-memory access
+      output.back ().x = output_bfr.points[vec_num_output_pl[cnt_pl]].x;
+      output.back ().y = output_bfr.points[vec_num_output_pl[cnt_pl]].y;
+      output.back ().z = output_bfr.points[vec_num_output_pl[cnt_pl]].z;
+      output.back ().r = 255;
+      output.back ().g = 0;
+      output.back ().b = 0;
+      cnt_pl++;
+    }
       
-  //   else if((0.60<=result)&&(result<0.70)&&(size_d2>count_d2)){
-  //     output.push_back (PointT ()); //Prevent out-of-memory access
-  //     output.back ().x = output_bfr.points[vec_num_output_d2[count_d2]].x;
-  //     output.back ().y = output_bfr.points[vec_num_output_d2[count_d2]].y;
-  //     output.back ().z = output_bfr.points[vec_num_output_d2[count_d2]].z;
-  //     output.back ().r = 10;
-  //     output.back ().g = 255;
-  //     output.back ().b = 255;
-  //     count_d2++;
-  //   }
+    else if((0.30<=result)&&(result<0.40)&&(size_grd>cnt_grd)){
+      output.push_back (PointT ()); //Prevent out-of-memory access
+      output.back ().x = output_bfr.points[vec_num_output_grd[cnt_grd]].x;
+      output.back ().y = output_bfr.points[vec_num_output_grd[cnt_grd]].y;
+      output.back ().z = output_bfr.points[vec_num_output_grd[cnt_grd]].z;
+      output.back ().r = 0;
+      output.back ().g = 128;
+      output.back ().b = 255;
+      cnt_grd++;
+    }
     
-  //   else if((0.70<=result)&&(size_d3>count_d3)){
-  //     output.push_back (PointT ()); //Prevent out-of-memory access
-  //     output.back ().x = output_bfr.points[vec_num_output_d3[count_d3]].x;
-  //     output.back ().y = output_bfr.points[vec_num_output_d3[count_d3]].y;
-  //     output.back ().z = output_bfr.points[vec_num_output_d3[count_d3]].z;
-  //     output.back ().r = 0;
-  //     output.back ().g = 230;
-  //     output.back ().b = 88;
-  //     count_d3++;
-  //   }
-    
-  //   iter++;
-  // }
-  // int total=size_d1+size_d2+size_d3;
-  // float rate_d1=(float)size_d1/(float)total;
-  // float rate_d2=(float)size_d2/(float)total;
-  // float rate_d3=(float)size_d3/(float)total;
-  // std::cerr<<"output_bfr size:"<<output_bfr.size()<<std::endl;
-  // std::cerr<<"Number of d1 points before weighted down sampling:"<<size_d1<<"(about "<<rate_d1<<"%)"<<std::endl;
-  // std::cerr<<"Number of d2 points before weighted down sampling:"<<size_d2<<"(about "<<rate_d2<<"%)"<<std::endl;
-  // std::cerr<<"Number of d3 points before weighted down sampling:"<<size_d3<<"(about "<<rate_d3<<"%)"<<std::endl;
+    else if((0.40<=result)&&(result<0.70)&&(size_bld>cnt_bld)){
+      output.push_back (PointT ()); //Prevent out-of-memory access
+      output.back ().x = output_bfr.points[vec_num_output_bld[cnt_bld]].x;
+      output.back ().y = output_bfr.points[vec_num_output_bld[cnt_bld]].y;
+      output.back ().z = output_bfr.points[vec_num_output_bld[cnt_bld]].z;
+      output.back ().r = 255;
+      output.back ().g = 143;
+      output.back ().b = 31;
+      cnt_bld++;
+    }
 
-  // total=count_d1+count_d2+count_d3;
-  // rate_d1=(float)count_d1/(float)total;
-  // rate_d2=(float)count_d2/(float)total;
-  // rate_d3=(float)count_d3/(float)total;
-  // std::cerr<<"Number of d1 points after weighted down sampling:"<<"(about "<<rate_d1<<"%)"<<std::endl;
-  // std::cerr<<"Number of d2 points after weighted down sampling:"<<"(about "<<rate_d2<<"%)"<<std::endl;
-  // std::cerr<<"Number of d3 points after weighted down sampling:"<<"(about "<<rate_d3<<"%)"<<std::endl;
+    else if((0.70<=result)&&(result<0.80)&&(size_tr>cnt_tr)){
+      output.push_back (PointT ()); //Prevent out-of-memory access
+      output.back ().x = output_bfr.points[vec_num_output_tr[cnt_tr]].x;
+      output.back ().y = output_bfr.points[vec_num_output_tr[cnt_tr]].y;
+      output.back ().z = output_bfr.points[vec_num_output_tr[cnt_tr]].z;
+      output.back ().r = 102;
+      output.back ().g = 255;
+      output.back ().b = 51;
+      cnt_tr++;
+    }
+
+    else if((0.80<=result)&&(size_rst>cnt_rst)){
+      output.push_back (PointT ()); //Prevent out-of-memory access
+      output.back ().x = output_bfr.points[vec_num_output_rst[cnt_rst]].x;
+      output.back ().y = output_bfr.points[vec_num_output_rst[cnt_rst]].y;
+      output.back ().z = output_bfr.points[vec_num_output_rst[cnt_rst]].z;
+      output.back ().r = 255;
+      output.back ().g = 255;
+      output.back ().b = 31;
+      cnt_rst++;
+    }
+    iter++;
+  }
+  int total=size_pl+size_grd+size_bld+size_tr+size_rst;
+  float rate_pl=(float)size_pl/(float)total;
+  float rate_grd=(float)size_grd/(float)total;
+  float rate_bld=(float)size_bld/(float)total;
+  float rate_tr=(float)size_tr/(float)total;
+  float rate_rst=(float)size_rst/(float)total;
+  std::cerr<<"output_bfr size:"<<output_bfr.size()<<std::endl;
+  std::cerr<<"Number of pole points before weighted down sampling:"<<size_pl<<"(about "<<rate_pl<<"%)"<<std::endl;
+  std::cerr<<"Number of ground points before weighted down sampling:"<<size_grd<<"(about "<<rate_grd<<"%)"<<std::endl;
+  std::cerr<<"Number of building points before weighted down sampling:"<<size_bld<<"(about "<<rate_bld<<"%)"<<std::endl;
+  std::cerr<<"Number of tree points before weighted down sampling:"<<size_tr<<"(about "<<rate_tr<<"%)"<<std::endl;
+  std::cerr<<"Number of the rest points before weighted down sampling:"<<size_rst<<"(about "<<rate_rst<<"%)"<<std::endl;
+
+  total=cnt_pl+cnt_grd+cnt_bld+cnt_tr+cnt_rst;
+  rate_pl=(float)cnt_pl/(float)total;
+  rate_grd=(float)cnt_grd/(float)total;
+  rate_bld=(float)cnt_bld/(float)total;
+  rate_tr=(float)cnt_tr/(float)total;
+  rate_rst=(float)cnt_rst/(float)total;
+  std::cerr<<"Number of pole points after weighted down sampling:"<<"(about "<<rate_pl<<"%)"<<std::endl;
+  std::cerr<<"Number of ground points after weighted down sampling:"<<"(about "<<rate_grd<<"%)"<<std::endl;
+  std::cerr<<"Number of building points after weighted down sampling:"<<"(about "<<rate_bld<<"%)"<<std::endl;
+  std::cerr<<"Number of tree points after weighted down sampling:"<<"(about "<<rate_tr<<"%)"<<std::endl;
+  std::cerr<<"Number of the rest points after weighted down sampling:"<<"(about "<<rate_rst<<"%)"<<std::endl;
   std::cerr<<"output size:"<<output.size()<<std::endl;
   
-  //Weighted sampling 20221226 oshikubo------------------↑↑↑↑↑
+  //Weighted sampling oshikubo------------------↑↑↑↑↑
   output.width = output.size ();
-  
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
