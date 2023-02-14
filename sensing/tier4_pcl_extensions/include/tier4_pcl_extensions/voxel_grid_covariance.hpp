@@ -403,89 +403,108 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
       // std::cerr<<"a:"<< a <<", b:"<<b<<", c:"<<c<<std::endl;
 
       std::vector<float> H {a,b,c};
-      std::vector<float> X {1.0f,0.0f,0.0f};
-      float H_abs,X_abs;
+      // std::vector<float> X {1.0f,0.0f,0.0f};
+      std::vector<float> Z {0.0f,0.0f,1.0f};
+      float H_abs,Z_abs;//float H_abs,X_abs;
       H_abs=sqrt(a*a+b*b+c*c);
-      X_abs=1.0f;
+      // X_abs=1.0f;
+      Z_abs=1.0f;
 
-      float inner_pro = H[0]*X[0];
+      // float inner_pro = H[0]*X[0];//X[1],X[2]は0なので省略
+      float inner_pro = H[2]*Z[2];
 
       //x軸と平面（共分散行列）のなす角度の計算
-      float rad_pla =acos(inner_pro/(H_abs*X_abs));//output:theta[rad](0〜3.14)
+      // float rad_pla =acos(inner_pro/(H_abs*X_abs));//output:theta[rad](0〜3.14)
+      float rad_pla =acos(inner_pro/(H_abs*Z_abs));//output:theta[rad](0〜3.14)
       // std::cerr<<"inner_pro:"<< inner_pro <<", rad_pla:"<<rad_pla<<std::endl;
       //-----↑
 
+      //Segment PC into Pole, Flat ground, Flat plane(building), Tree(?) ,and the rest
       // Do we need to process all the fields?
       if (!downsample_all_data_)
-    
       {
-          // if(d==1 /*Only poles*/ )/*covariance conditions*/ 
-          if(rad_pla>3.0 || rad_pla<0.1 /*plane*/ )
+          // if(rad_pla>3.0 || rad_pla<0.1 /*Flat plane(building)*/ )
+          if(rad_pla<=1.745 && rad_pla>=1.396/*Flat plane(building)*/)
           {
           output.back ().x = leaf.centroid[0];
           output.back ().y = leaf.centroid[1];
           output.back ().z = leaf.centroid[2];
           output.back ().r = 255;
-          output.back ().g = 0;
-          output.back ().b = 0;//red
+          output.back ().g = 143;
+          output.back ().b = 31;//orange
 
-          pcl::PointXYZRGB p;
-          p.x=leaf.centroid[0];
-          p.y=leaf.centroid[1];
-          p.z=leaf.centroid[2];
-          p.r=255;
-          p.g=0;
-          p.b=0;
-          output_bfr.push_back(p);
+          // pcl::PointXYZRGB p;
+          // p.x=leaf.centroid[0];
+          // p.y=leaf.centroid[1];
+          // p.z=leaf.centroid[2];
+          // p.r=255;
+          // p.g=0;
+          // p.b=0;
+          // output_bfr.push_back(p);
+
           size_d1++;
           vec_num_output_d1.push_back(ctrl_num);
           }
-
-          // else if(d==2 /*Only plane*/ )/*covariance conditions*/     
-          else if(rad_pla<=1.745 && rad_pla>=1.396 /*ground plane*/ )
-          {
-          output.back ().x = leaf.centroid[0];
-          output.back ().y = leaf.centroid[1];
-          output.back ().z = leaf.centroid[2];
-          output.back ().r = 10;
-          output.back ().g = 255;
-          output.back ().b = 255;//skyblue
-
-          pcl::PointXYZRGB p;
-          p.x=leaf.centroid[0];
-          p.y=leaf.centroid[1];
-          p.z=leaf.centroid[2];
-          p.r=10;
-          p.g=255;
-          p.b=255;
-          output_bfr.push_back(p);
-
-          size_d2++;
-          vec_num_output_d2.push_back(ctrl_num);
-          
-          }
-          else if(d==1) {
-            // std::cerr<<"aaaaa"<<std::endl;
-          }
-
-          // else if(d==3 /*Only leaves*/ )/*covariance conditions*/
-          else/*Except for plane*/ 
+     
+          // else if(rad_pla<=1.745 && rad_pla>=1.396 /*Flat ground*/ )
+          else if(rad_pla>3.0 || rad_pla<0.1 /*Flat ground*/ )
           {
           output.back ().x = leaf.centroid[0];
           output.back ().y = leaf.centroid[1];
           output.back ().z = leaf.centroid[2];
           output.back ().r = 0;
-          output.back ().g = 230;
-          output.back ().b = 88;//green
+          output.back ().g = 128;
+          output.back ().b = 255;//blue
 
-          pcl::PointXYZRGB p;
-          p.x=leaf.centroid[0];
-          p.y=leaf.centroid[1];
-          p.z=leaf.centroid[2];
-          p.r=0;
-          p.g=230;
-          p.b=88;
-          output_bfr.push_back(p);
+          // pcl::PointXYZRGB p;
+          // p.x=leaf.centroid[0];
+          // p.y=leaf.centroid[1];
+          // p.z=leaf.centroid[2];
+          // p.r=10;
+          // p.g=255;
+          // p.b=255;
+          // output_bfr.push_back(p);
+
+          size_d2++;
+          vec_num_output_d2.push_back(ctrl_num);
+          
+          }
+          else if(d==1 /*Only poles*/) {
+            output.back ().x = leaf.centroid[0];
+            output.back ().y = leaf.centroid[1];
+            output.back ().z = leaf.centroid[2];
+            output.back ().r = 255;
+            output.back ().g = 0;
+            output.back ().b = 0;
+          }
+
+          else if(d==3 /*Tree(?)*/) {
+            output.back ().x = leaf.centroid[0];
+            output.back ().y = leaf.centroid[1];
+            output.back ().z = leaf.centroid[2];
+            output.back ().r = 102;
+            output.back ().g = 255;
+            output.back ().b = 51;
+          }
+
+          // else if(d==3 /*Only leaves*/ )/*covariance conditions*/
+          else/*the rest*/ 
+          {
+          output.back ().x = leaf.centroid[0];
+          output.back ().y = leaf.centroid[1];
+          output.back ().z = leaf.centroid[2];
+          output.back ().r = 255;
+          output.back ().g = 255;
+          output.back ().b = 31;//yellow
+
+          // pcl::PointXYZRGB p;
+          // p.x=leaf.centroid[0];
+          // p.y=leaf.centroid[1];
+          // p.z=leaf.centroid[2];
+          // p.r=0;
+          // p.g=230;
+          // p.b=88;
+          // output_bfr.push_back(p);
     
           size_d3++;
           vec_num_output_d3.push_back(ctrl_num);
