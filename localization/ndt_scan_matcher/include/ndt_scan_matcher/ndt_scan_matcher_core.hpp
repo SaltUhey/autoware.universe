@@ -62,6 +62,8 @@
 #include <thread>
 #include <vector>
 
+#include "ndt_scan_matcher/sampling_search.hpp"
+
 enum class ConvergedParamType {
   TRANSFORM_PROBABILITY = 0,
   NEAREST_VOXEL_TRANSFORMATION_LIKELIHOOD = 1
@@ -205,6 +207,8 @@ private:
 
   bool estimate_scores_for_degrounded_scan_;
   double z_margin_for_ground_removal_;
+
+  Sampling_search sampling_search_;
 };
 
 #endif  // NDT_SCAN_MATCHER__NDT_SCAN_MATCHER_CORE_HPP_
