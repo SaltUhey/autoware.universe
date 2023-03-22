@@ -178,6 +178,7 @@ NDTScanMatcher::NDTScanMatcher()
   no_ground_points_aligned_pose_pub_ =
     this->create_publisher<sensor_msgs::msg::PointCloud2>("points_aligned_no_ground", 10);
   ndt_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("ndt_pose", 10);
+  ndt_canditate_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("ndt_canditate_pose", 10);
   ndt_pose_with_covariance_pub_ =
     this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
       "ndt_pose_with_covariance", 10);
@@ -369,12 +370,13 @@ void NDTScanMatcher::callback_sensor_points(
 
   // perform ndt scan matching
   (*state_ptr_)["state"] = "Aligning";
-  const Eigen::Matrix4f initial_pose_matrix =
+  Eigen::Matrix4f initial_pose_matrix =
     pose_to_matrix4f(interpolator.get_current_pose().pose.pose);
-  auto output_cloud = std::make_shared<pcl::PointCloud<PointSource>>();
+  std::cout << "Here is the matrix initial_pose_matrix:\n" << initial_pose_matrix << std::endl;
+  auto output_cloud = std::make_shared<pcl::PointCloud<PointSource>>();//constを外した
   //ndt_ptr_->align(*output_cloud, initial_pose_matrix);
-  ndt_ptr_->align(*output_cloud, sampling_search_.pose_update(initial_pose_matrix));
-  const pclomp::NdtResult ndt_result = ndt_ptr_->getResult();
+  ndt_ptr_->align(*output_cloud, sampling_search_.pose_update(initial_pose_matrix));//20230314
+  pclomp::NdtResult ndt_result = ndt_ptr_->getResult();//constを外した
   (*state_ptr_)["state"] = "Sleeping";
 
   const auto exe_end_time = std::chrono::system_clock::now();
@@ -382,7 +384,7 @@ void NDTScanMatcher::callback_sensor_points(
     std::chrono::duration_cast<std::chrono::microseconds>(exe_end_time - exe_start_time).count() /
     1000.0;
 
-  const geometry_msgs::msg::Pose result_pose_msg = matrix4f_to_pose(ndt_result.pose);
+  geometry_msgs::msg::Pose result_pose_msg = matrix4f_to_pose(ndt_result.pose);//constを外した
   std::vector<geometry_msgs::msg::Pose> transformation_msg_array;
   for (const auto & pose_matrix : ndt_result.transformation_array) {
     geometry_msgs::msg::Pose pose_ros = matrix4f_to_pose(pose_matrix);
@@ -430,6 +432,7 @@ void NDTScanMatcher::callback_sensor_points(
   iteration_num_pub_->publish(make_int32_stamped(sensor_ros_time, ndt_result.iteration_num));
   publish_tf(sensor_ros_time, result_pose_msg);
   publish_pose(sensor_ros_time, result_pose_msg, is_converged);
+  
   publish_marker(sensor_ros_time, transformation_msg_array);
   publish_initial_to_result_distances(
     sensor_ros_time, result_pose_msg, interpolator.get_current_pose(), interpolator.get_old_pose(),
@@ -482,7 +485,16 @@ void NDTScanMatcher::callback_sensor_points(
     (*state_ptr_)["is_local_optimal_solution_oscillation"] = "0";
   }
 
-  sampling_search_.sampling_search(ndt_result.pose, ndt_result.transform_probability, sensor_points_baselinkTF_ptr,ndt_ptr_);
+  //20230322--------
+  std::vector<pclomp::NdtResult> vec_ndt_canditates;
+  vec_ndt_canditates=sampling_search_.sampling_search(ndt_result.pose, ndt_result.transform_probability, sensor_points_baselinkTF_ptr,ndt_ptr_);
+  //sampling_search_.sampling_search(ndt_result.pose, ndt_result.transform_probability, sensor_points_baselinkTF_ptr,ndt_ptr_);//20230314 tunnel patch origin
+  for(std::size_t i=0; i< vec_ndt_canditates.size();i++){
+  geometry_msgs::msg::Pose canditate_pose_msg = matrix4f_to_pose(vec_ndt_canditates[i].pose);//publish this
+  publish_pose_canditate(sensor_ros_time, canditate_pose_msg, is_converged);
+  }
+  //20230322--------
+  
 }
 
 void NDTScanMatcher::transform_sensor_measurement(
@@ -528,10 +540,34 @@ void NDTScanMatcher::publish_pose(
   result_pose_with_cov_msg.pose.covariance = output_pose_covariance_;
 
   if (is_converged) {
-    ndt_pose_pub_->publish(result_pose_stamped_msg);
+    ndt_pose_pub_->publish(result_pose_stamped_msg);//20230322 うまくいっていない(?)
     ndt_pose_with_covariance_pub_->publish(result_pose_with_cov_msg);
   }
 }
+
+//Function to scatter particles and publish all coordinates for which scan matching is computed---------
+//20230322
+void NDTScanMatcher::publish_pose_canditate(
+  const rclcpp::Time & sensor_ros_time, const geometry_msgs::msg::Pose & canditate_pose_msg,
+  const bool is_converged)
+{
+  geometry_msgs::msg::PoseStamped canditate_pose_stamped_msg;
+  canditate_pose_stamped_msg.header.stamp = sensor_ros_time;
+  canditate_pose_stamped_msg.header.frame_id = map_frame_;
+  canditate_pose_stamped_msg.pose = canditate_pose_msg;
+
+  // geometry_msgs::msg::PoseWithCovarianceStamped canditate_pose_with_cov_msg;
+  // canditate_pose_with_cov_msg.header.stamp = sensor_ros_time;
+  // canditate_pose_with_cov_msg.header.frame_id = map_frame_;
+  // canditate_pose_with_cov_msg.pose.pose = canditate_pose_msg;
+  // canditate_pose_with_cov_msg.pose.covariance = output_pose_covariance_;
+
+  if (is_converged) {
+    ndt_canditate_pose_pub_->publish(canditate_pose_stamped_msg);//これでpublishされるはず
+    //ndt_pose_with_covariance_pub_->publish(canditate_pose_with_cov_msg);
+  }
+}
+//--------------------------------------------------------------------------
 
 void NDTScanMatcher::publish_point_cloud(
   const rclcpp::Time & sensor_ros_time, const std::string & frame_id,

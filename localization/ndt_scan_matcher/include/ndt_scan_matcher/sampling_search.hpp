@@ -18,6 +18,8 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
+#include <multigrid_pclomp/multigrid_ndt_omp.h>
+
 #include <array>
 #include <deque>
 #include <map>
@@ -40,8 +42,10 @@ struct Sampling_search
     pclomp::MultiGridNormalDistributionsTransform<PointSource, PointTarget>;
 
   Sampling_search() { mc_slip_pose_ = Eigen::Matrix4f::Identity(4, 4); }
-
-  void sampling_search(
+  
+  //${try_count} times, randomly scatter the points, and if the score is higher than ${er than ${ndt_result.transform_probability}, adopt
+  /*void sampling_search(*/
+  std::vector<pclomp::NdtResult> sampling_search(
     Eigen::Matrix4f result_pose_matrix, double peak_tp,
     std::shared_ptr<pcl::PointCloud<PointSource>> sensor_points_baselinkTF_ptr,
     const std::shared_ptr<NormalDistributionsTransform> & ndt_ptr)
@@ -55,7 +59,9 @@ struct Sampling_search
     auto output_cloud = std::make_shared<pcl::PointCloud<PointSource>>();
     // for (double dist = -2; dist <= 2; dist+=0.5) {
     double dist;
-    for (int try_count = 0; try_count < 1; try_count++) {
+    //add 20230322-----
+    std::vector<pclomp::NdtResult> vec_ndt_canditates;
+    for (int try_count = 0; try_count < 1; try_count++) {//
       dist = 6.0 * ((double)rand() / RAND_MAX - 0.5);
       Eigen::Matrix4f shift_matrix = Eigen::Matrix4f::Identity(4, 4);
       shift_matrix(0, 3) = dist;
@@ -65,14 +71,22 @@ struct Sampling_search
       ndt_ptr->align(*output_cloud, mc_pose_matrix);
       double tp = ndt_ptr->getTransformationProbability();
 
+      //add 20230322-----
+      //std::vector<pclomp::NdtResult> vec_ndt_canditates;
+      pclomp::NdtResult ndt_canditate = ndt_ptr->getResult();//getResult()でndtやった後
+      vec_ndt_canditates.push_back(ndt_canditate);
+      //geometry_msgs::msg::Pose camditate_pose_msg = matrix4f_to_pose(ndt_canditate.pose);//publish this
+      //--------
+
       if (mc_max_tp < tp) {  // find max tp
         mc_max_tp = tp;
-        mc_slip_pose_ =
+        mc_slip_pose_ =/*next stepで使う*/
           result_pose_matrix.inverse() * mc_pose_matrix;  //*mc_center_pose_matrix.inverse();
       }
     }
     // return to original
     ndt_ptr->setMaximumIterations(max_iter);
+    return vec_ndt_canditates;//std::vector<pclomp::NdtResult> vec_ndt_canditates/std::vector<geometry_msgs::msg::PoseStamped>
   }
 
   // replace initial position for align process.
