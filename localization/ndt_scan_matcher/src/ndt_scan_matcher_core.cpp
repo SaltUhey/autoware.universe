@@ -179,6 +179,8 @@ NDTScanMatcher::NDTScanMatcher()
     this->create_publisher<sensor_msgs::msg::PointCloud2>("points_aligned_no_ground", 10);
   ndt_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("ndt_pose", 10);
   ndt_canditate_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("ndt_canditate_pose", 10);
+  ndt_canditate_pose_bfr_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("ndt_canditate_bfr_pose", 10);
+  ndt_origin_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("ndt_origin_pose", 10);
   ndt_pose_with_covariance_pub_ =
     this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
       "ndt_pose_with_covariance", 10);
@@ -486,13 +488,24 @@ void NDTScanMatcher::callback_sensor_points(
   }
 
   //20230322--------
-  std::vector<pclomp::NdtResult> vec_ndt_canditates;
-  vec_ndt_canditates=sampling_search_.sampling_search(ndt_result.pose, ndt_result.transform_probability, sensor_points_baselinkTF_ptr,ndt_ptr_);
+  //std::vector<pclomp::NdtResult> vec_ndt_canditates;
+  //vec_ndt_canditates=sampling_search_.sampling_search(ndt_result.pose, ndt_result.transform_probability, sensor_points_baselinkTF_ptr,ndt_ptr_);
+  Compare_pose compare_pose;
+  compare_pose=sampling_search_.sampling_search(ndt_result.pose, ndt_result.transform_probability, sensor_points_baselinkTF_ptr,ndt_ptr_);
   //sampling_search_.sampling_search(ndt_result.pose, ndt_result.transform_probability, sensor_points_baselinkTF_ptr,ndt_ptr_);//20230314 tunnel patch origin
-  for(std::size_t i=0; i< vec_ndt_canditates.size();i++){
-  geometry_msgs::msg::Pose canditate_pose_msg = matrix4f_to_pose(vec_ndt_canditates[i].pose);//publish this
+  for(std::size_t i=0; i< compare_pose.vec_ndt_canditates_rst.size();i++){
+  geometry_msgs::msg::Pose canditate_pose_msg = matrix4f_to_pose(compare_pose.vec_ndt_canditates_rst[i].pose);//publish this
   publish_pose_canditate(sensor_ros_time, canditate_pose_msg, is_converged);
+  //add function to publish and "canditate points before ndt"
   }
+  for(std::size_t i=0; i< compare_pose.vec_ndt_canditate.size();i++){
+  geometry_msgs::msg::Pose canditate_pose_bfr_msg = matrix4f_to_pose(compare_pose.vec_ndt_canditate[i]);//publish this
+  publish_pose_bfr_canditate(sensor_ros_time, canditate_pose_bfr_msg, is_converged);
+  }
+  //add function to publish "origin pose" 
+  geometry_msgs::msg::Pose origin_pose_msg = matrix4f_to_pose(compare_pose.origin_pose);//publish this
+  publish_pose_origin(sensor_ros_time, origin_pose_msg, is_converged);
+
   //20230322--------
   
 }
@@ -540,7 +553,7 @@ void NDTScanMatcher::publish_pose(
   result_pose_with_cov_msg.pose.covariance = output_pose_covariance_;
 
   if (is_converged) {
-    ndt_pose_pub_->publish(result_pose_stamped_msg);//20230322 うまくいっていない(?)
+    ndt_pose_pub_->publish(result_pose_stamped_msg);//20230322
     ndt_pose_with_covariance_pub_->publish(result_pose_with_cov_msg);
   }
 }
@@ -556,15 +569,36 @@ void NDTScanMatcher::publish_pose_canditate(
   canditate_pose_stamped_msg.header.frame_id = map_frame_;
   canditate_pose_stamped_msg.pose = canditate_pose_msg;
 
-  // geometry_msgs::msg::PoseWithCovarianceStamped canditate_pose_with_cov_msg;
-  // canditate_pose_with_cov_msg.header.stamp = sensor_ros_time;
-  // canditate_pose_with_cov_msg.header.frame_id = map_frame_;
-  // canditate_pose_with_cov_msg.pose.pose = canditate_pose_msg;
-  // canditate_pose_with_cov_msg.pose.covariance = output_pose_covariance_;
+  if (is_converged) {
+    ndt_canditate_pose_pub_->publish(canditate_pose_stamped_msg);
+  }
+}
+
+void NDTScanMatcher::publish_pose_bfr_canditate(
+  const rclcpp::Time & sensor_ros_time, const geometry_msgs::msg::Pose & canditate_pose_bfr_msg,
+  const bool is_converged)
+{
+  geometry_msgs::msg::PoseStamped canditate_pose_bfr_stamped_msg;
+  canditate_pose_bfr_stamped_msg.header.stamp = sensor_ros_time;
+  canditate_pose_bfr_stamped_msg.header.frame_id = map_frame_;
+  canditate_pose_bfr_stamped_msg.pose = canditate_pose_bfr_msg;
 
   if (is_converged) {
-    ndt_canditate_pose_pub_->publish(canditate_pose_stamped_msg);//これでpublishされるはず
-    //ndt_pose_with_covariance_pub_->publish(canditate_pose_with_cov_msg);
+    ndt_canditate_pose_bfr_pub_->publish(canditate_pose_bfr_stamped_msg);
+  }
+}
+
+void NDTScanMatcher::publish_pose_origin(
+  const rclcpp::Time & sensor_ros_time, const geometry_msgs::msg::Pose & origin_pose_msg,
+  const bool is_converged)
+{
+  geometry_msgs::msg::PoseStamped origin_pose_stamped_msg;
+  origin_pose_stamped_msg.header.stamp = sensor_ros_time;
+  origin_pose_stamped_msg.header.frame_id = map_frame_;
+  origin_pose_stamped_msg.pose = origin_pose_msg;
+
+  if (is_converged) {
+    ndt_origin_pose_pub_->publish(origin_pose_stamped_msg);
   }
 }
 //--------------------------------------------------------------------------

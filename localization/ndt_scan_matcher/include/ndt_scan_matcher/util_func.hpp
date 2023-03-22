@@ -35,6 +35,8 @@
 #include <random>
 #include <vector>
 
+#include <multigrid_pclomp/multigrid_ndt_omp.h>
+
 // ref by http://takacity.blog.fc2.com/blog-entry-69.html
 std_msgs::msg::ColorRGBA exchange_color_crc(double x);
 
@@ -85,5 +87,12 @@ T transform(const T & input, const geometry_msgs::msg::TransformStamped & transf
 }
 
 double norm(const geometry_msgs::msg::Point & p1, const geometry_msgs::msg::Point & p2);
+
+struct Compare_pose
+{
+  Eigen::Matrix4f origin_pose;
+  std::vector<Eigen::Matrix4f> vec_ndt_canditate;//canditate points
+  std::vector<pclomp::NdtResult> vec_ndt_canditates_rst;//result with considering random sampling
+};
 
 #endif  // NDT_SCAN_MATCHER__UTIL_FUNC_HPP_

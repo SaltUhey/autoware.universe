@@ -18,8 +18,6 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
-#include <multigrid_pclomp/multigrid_ndt_omp.h>
-
 #include <array>
 #include <deque>
 #include <map>
@@ -29,11 +27,14 @@
 #include <thread>
 #include <vector>
 
+#include "ndt_scan_matcher/util_func.hpp"
+
 // this function checks transformation probability(TP) on trajectory.
 // normally, converged position indicates maximum TP.
 // however, in tunnel, another place indicates larger TP sometime due to small convergence area.
 // this function find maxium TP place on trajectory and update initial position to recover to
 // correct position.
+
 struct Sampling_search
 {
   using PointSource = pcl::PointXYZ;
@@ -45,7 +46,8 @@ struct Sampling_search
   
   //${try_count} times, randomly scatter the points, and if the score is higher than ${er than ${ndt_result.transform_probability}, adopt
   /*void sampling_search(*/
-  std::vector<pclomp::NdtResult> sampling_search(
+  /*std::vector<pclomp::NdtResult> sampling_search(*/
+  struct Compare_pose sampling_search(
     Eigen::Matrix4f result_pose_matrix, double peak_tp,
     std::shared_ptr<pcl::PointCloud<PointSource>> sensor_points_baselinkTF_ptr,
     const std::shared_ptr<NormalDistributionsTransform> & ndt_ptr)
@@ -54,19 +56,22 @@ struct Sampling_search
     int max_iter = ndt_ptr->getMaximumIterations();
     // setMaxiteration to 1
     ndt_ptr->setMaximumIterations(1);
-    double mc_max_tp = peak_tp;
+    double mc_max_tp = peak_tp;//peak_tp:origin tp
 
     auto output_cloud = std::make_shared<pcl::PointCloud<PointSource>>();
     // for (double dist = -2; dist <= 2; dist+=0.5) {
     double dist;
     //add 20230322-----
-    std::vector<pclomp::NdtResult> vec_ndt_canditates;
+    //std::vector<pclomp::NdtResult> vec_ndt_canditates;
+    Compare_pose compare_pose;
+    compare_pose.origin_pose=result_pose_matrix;
+
     for (int try_count = 0; try_count < 1; try_count++) {//
       dist = 6.0 * ((double)rand() / RAND_MAX - 0.5);
       Eigen::Matrix4f shift_matrix = Eigen::Matrix4f::Identity(4, 4);
       shift_matrix(0, 3) = dist;
       const Eigen::Matrix4f mc_pose_matrix = result_pose_matrix * shift_matrix;
-
+      compare_pose.vec_ndt_canditate.push_back(mc_pose_matrix);
       ndt_ptr->setInputSource(sensor_points_baselinkTF_ptr);
       ndt_ptr->align(*output_cloud, mc_pose_matrix);
       double tp = ndt_ptr->getTransformationProbability();
@@ -74,7 +79,8 @@ struct Sampling_search
       //add 20230322-----
       //std::vector<pclomp::NdtResult> vec_ndt_canditates;
       pclomp::NdtResult ndt_canditate = ndt_ptr->getResult();//getResult()でndtやった後
-      vec_ndt_canditates.push_back(ndt_canditate);
+      //vec_ndt_canditates.push_back(ndt_canditate);
+      compare_pose.vec_ndt_canditates_rst.push_back(ndt_canditate);
       //geometry_msgs::msg::Pose camditate_pose_msg = matrix4f_to_pose(ndt_canditate.pose);//publish this
       //--------
 
@@ -86,7 +92,8 @@ struct Sampling_search
     }
     // return to original
     ndt_ptr->setMaximumIterations(max_iter);
-    return vec_ndt_canditates;//std::vector<pclomp::NdtResult> vec_ndt_canditates/std::vector<geometry_msgs::msg::PoseStamped>
+    //return vec_ndt_canditates;//std::vector<pclomp::NdtResult> vec_ndt_canditates/std::vector<geometry_msgs::msg::PoseStamped>
+    return compare_pose;
   }
 
   // replace initial position for align process.
