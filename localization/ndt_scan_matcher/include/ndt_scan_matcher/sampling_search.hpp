@@ -68,7 +68,7 @@ struct Sampling_search
     compare_pose.which=0;
 
     for (int try_count = 0; try_count < 1; try_count++) {//
-      dist = 6.0 * ((double)rand() / RAND_MAX - 0.5);
+      dist = 6.0 * ((double)rand() / RAND_MAX - 0.5);//max 3?
       Eigen::Matrix4f shift_matrix = Eigen::Matrix4f::Identity(4, 4);
       shift_matrix(0, 3) = dist;
       std::cout << "Here is the matrix shift_matrix:\n" << shift_matrix << std::endl;

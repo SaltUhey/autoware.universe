@@ -379,10 +379,10 @@ void NDTScanMatcher::callback_sensor_points(
   Eigen::Matrix4f initial_pose_matrix =
     pose_to_matrix4f(interpolator.get_current_pose().pose.pose);
   std::cout << "Here is the matrix initial_pose_matrix:\n" << initial_pose_matrix << std::endl;
-  auto output_cloud = std::make_shared<pcl::PointCloud<PointSource>>();//constを外した
-  //ndt_ptr_->align(*output_cloud, initial_pose_matrix);
+  const auto output_cloud = std::make_shared<pcl::PointCloud<PointSource>>();//constを外した
+  //ndt_ptr_->align(*output_cloud, initial_pose_matrix);//ON・OFFで切り替える
   ndt_ptr_->align(*output_cloud, sampling_search_.pose_update(initial_pose_matrix));//20230314
-  pclomp::NdtResult ndt_result = ndt_ptr_->getResult();//constを外した
+  const pclomp::NdtResult ndt_result = ndt_ptr_->getResult();//constを外した
   (*state_ptr_)["state"] = "Sleeping";
 
   const auto exe_end_time = std::chrono::system_clock::now();
@@ -390,7 +390,7 @@ void NDTScanMatcher::callback_sensor_points(
     std::chrono::duration_cast<std::chrono::microseconds>(exe_end_time - exe_start_time).count() /
     1000.0;
 
-  geometry_msgs::msg::Pose result_pose_msg = matrix4f_to_pose(ndt_result.pose);//constを外した
+  const geometry_msgs::msg::Pose result_pose_msg = matrix4f_to_pose(ndt_result.pose);//constを外した
   std::vector<geometry_msgs::msg::Pose> transformation_msg_array;
   for (const auto & pose_matrix : ndt_result.transformation_array) {
     geometry_msgs::msg::Pose pose_ros = matrix4f_to_pose(pose_matrix);
@@ -519,7 +519,7 @@ void NDTScanMatcher::callback_sensor_points(
 
   ////add function to publish "shift" 
   float f_dist=compare_pose.vec_shift[0];//メモリ外アクセスに注意
-  std::cout << "f_dist:" << f_dist <<" m" << std::endl;
+  std::cerr << "f_dist:" << f_dist <<" m" << std::endl;
   sift_dist_sampling_search_pub_->publish(
     make_float32_stamped(sensor_ros_time, f_dist));
 
