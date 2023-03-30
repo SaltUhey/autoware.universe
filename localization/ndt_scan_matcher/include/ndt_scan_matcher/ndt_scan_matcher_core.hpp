@@ -111,11 +111,14 @@ private:
   void publish_pose_canditate(
     const rclcpp::Time & sensor_ros_time, const geometry_msgs::msg::Pose & canditate_pose_msg,
     const bool is_converged);
-  void publish_pose_bfr_canditate(
-    const rclcpp::Time & sensor_ros_time, const geometry_msgs::msg::Pose & canditate_pose_msg,
-    const bool is_converged);
+  // void publish_pose_bfr_canditate(
+  //   const rclcpp::Time & sensor_ros_time, const geometry_msgs::msg::Pose & canditate_pose_msg,
+  //   const bool is_converged);
   void publish_pose_origin(
-    const rclcpp::Time & sensor_ros_time, const geometry_msgs::msg::Pose & canditate_pose_msg,
+    const rclcpp::Time & sensor_ros_time, const geometry_msgs::msg::Pose & origin_pose_msg,
+    const bool is_converged);
+  void publish_pose_selected(
+    const rclcpp::Time & sensor_ros_time, const geometry_msgs::msg::Pose & selected_pose_msg,
     const bool is_converged);
   void publish_point_cloud(
     const rclcpp::Time & sensor_ros_time, const std::string & frame_id,
@@ -149,8 +152,9 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr no_ground_points_aligned_pose_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr ndt_pose_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr ndt_canditate_pose_pub_;
-  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr ndt_canditate_pose_bfr_pub_;
+  //rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr ndt_canditate_pose_bfr_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr ndt_origin_pose_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr ndt_selected_pose_pub_;//20230330
   
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
     ndt_pose_with_covariance_pub_;
@@ -171,6 +175,8 @@ private:
     initial_to_result_distance_old_pub_;
   rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr
     initial_to_result_distance_new_pub_;
+  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr
+    sift_dist_sampling_search_pub_;//20230330
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr ndt_marker_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
     ndt_monte_carlo_initial_pose_marker_pub_;

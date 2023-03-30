@@ -179,8 +179,9 @@ NDTScanMatcher::NDTScanMatcher()
     this->create_publisher<sensor_msgs::msg::PointCloud2>("points_aligned_no_ground", 10);
   ndt_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("ndt_pose", 10);
   ndt_canditate_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("ndt_canditate_pose", 10);
-  ndt_canditate_pose_bfr_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("ndt_canditate_bfr_pose", 10);
+  //ndt_canditate_pose_bfr_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("ndt_canditate_bfr_pose", 10);
   ndt_origin_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("ndt_origin_pose", 10);
+  ndt_selected_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("ndt_selected_pose", 10);
   ndt_pose_with_covariance_pub_ =
     this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
       "ndt_pose_with_covariance", 10);
@@ -209,6 +210,9 @@ NDTScanMatcher::NDTScanMatcher()
   initial_to_result_distance_new_pub_ =
     this->create_publisher<tier4_debug_msgs::msg::Float32Stamped>(
       "initial_to_result_distance_new", 10);
+  sift_dist_sampling_search_pub_ =
+    this->create_publisher<tier4_debug_msgs::msg::Float32Stamped>(
+      "sift_dist_sampling_search", 10);//20230330
   ndt_marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("ndt_marker", 10);
   diagnostics_pub_ =
     this->create_publisher<diagnostic_msgs::msg::DiagnosticArray>("/diagnostics", 10);
@@ -487,26 +491,39 @@ void NDTScanMatcher::callback_sensor_points(
     (*state_ptr_)["is_local_optimal_solution_oscillation"] = "0";
   }
 
-  //20230322--------
+  //20230322,20230330--------
   //std::vector<pclomp::NdtResult> vec_ndt_canditates;
   //vec_ndt_canditates=sampling_search_.sampling_search(ndt_result.pose, ndt_result.transform_probability, sensor_points_baselinkTF_ptr,ndt_ptr_);
   Compare_pose compare_pose;
   compare_pose=sampling_search_.sampling_search(ndt_result.pose, ndt_result.transform_probability, sensor_points_baselinkTF_ptr,ndt_ptr_);
   //sampling_search_.sampling_search(ndt_result.pose, ndt_result.transform_probability, sensor_points_baselinkTF_ptr,ndt_ptr_);//20230314 tunnel patch origin
-  for(std::size_t i=0; i< compare_pose.vec_ndt_canditates_rst.size();i++){
-  geometry_msgs::msg::Pose canditate_pose_msg = matrix4f_to_pose(compare_pose.vec_ndt_canditates_rst[i].pose);//publish this
-  publish_pose_canditate(sensor_ros_time, canditate_pose_msg, is_converged);
-  //add function to publish and "canditate points before ndt"
-  }
+
   for(std::size_t i=0; i< compare_pose.vec_ndt_canditate.size();i++){
-  geometry_msgs::msg::Pose canditate_pose_bfr_msg = matrix4f_to_pose(compare_pose.vec_ndt_canditate[i]);//publish this
-  publish_pose_bfr_canditate(sensor_ros_time, canditate_pose_bfr_msg, is_converged);
+    geometry_msgs::msg::Pose canditate_pose_msg = matrix4f_to_pose(compare_pose.vec_ndt_canditate[i]);
+    publish_pose_canditate(sensor_ros_time, canditate_pose_msg, is_converged);
   }
   //add function to publish "origin pose" 
-  geometry_msgs::msg::Pose origin_pose_msg = matrix4f_to_pose(compare_pose.origin_pose);//publish this
+  geometry_msgs::msg::Pose origin_pose_msg = matrix4f_to_pose(compare_pose.origin_pose);
   publish_pose_origin(sensor_ros_time, origin_pose_msg, is_converged);
 
-  //20230322--------
+  if(compare_pose.which==1){
+    //canditate_pose_msgがpublishされるように
+    geometry_msgs::msg::Pose selected_pose_msg = matrix4f_to_pose(compare_pose.vec_ndt_canditate[0]);
+    publish_pose_selected(sensor_ros_time, selected_pose_msg, is_converged);
+  }
+  else if(compare_pose.which==0){
+    //origin_pose_msgがpublishされるように
+    geometry_msgs::msg::Pose selected_pose_msg = matrix4f_to_pose(compare_pose.origin_pose);
+    publish_pose_selected(sensor_ros_time, selected_pose_msg, is_converged);
+  }
+
+  ////add function to publish "shift" 
+  float f_dist=compare_pose.vec_shift[0];//メモリ外アクセスに注意
+  std::cout << "f_dist:" << f_dist <<" m" << std::endl;
+  sift_dist_sampling_search_pub_->publish(
+    make_float32_stamped(sensor_ros_time, f_dist));
+
+  //20230322,20230330--------
   
 }
 
@@ -574,20 +591,6 @@ void NDTScanMatcher::publish_pose_canditate(
   }
 }
 
-void NDTScanMatcher::publish_pose_bfr_canditate(
-  const rclcpp::Time & sensor_ros_time, const geometry_msgs::msg::Pose & canditate_pose_bfr_msg,
-  const bool is_converged)
-{
-  geometry_msgs::msg::PoseStamped canditate_pose_bfr_stamped_msg;
-  canditate_pose_bfr_stamped_msg.header.stamp = sensor_ros_time;
-  canditate_pose_bfr_stamped_msg.header.frame_id = map_frame_;
-  canditate_pose_bfr_stamped_msg.pose = canditate_pose_bfr_msg;
-
-  if (is_converged) {
-    ndt_canditate_pose_bfr_pub_->publish(canditate_pose_bfr_stamped_msg);
-  }
-}
-
 void NDTScanMatcher::publish_pose_origin(
   const rclcpp::Time & sensor_ros_time, const geometry_msgs::msg::Pose & origin_pose_msg,
   const bool is_converged)
@@ -601,6 +604,21 @@ void NDTScanMatcher::publish_pose_origin(
     ndt_origin_pose_pub_->publish(origin_pose_stamped_msg);
   }
 }
+
+void NDTScanMatcher::publish_pose_selected(
+  const rclcpp::Time & sensor_ros_time, const geometry_msgs::msg::Pose & selected_pose_msg,
+  const bool is_converged)
+{
+  geometry_msgs::msg::PoseStamped selected_pose_stamped_msg;
+  selected_pose_stamped_msg.header.stamp = sensor_ros_time;
+  selected_pose_stamped_msg.header.frame_id = map_frame_;
+  selected_pose_stamped_msg.pose = selected_pose_msg;
+
+  if (is_converged) {
+    ndt_selected_pose_pub_->publish(selected_pose_stamped_msg);
+  }
+}
+
 //--------------------------------------------------------------------------
 
 void NDTScanMatcher::publish_point_cloud(
