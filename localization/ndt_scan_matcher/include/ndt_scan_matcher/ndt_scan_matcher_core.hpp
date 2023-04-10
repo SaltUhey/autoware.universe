@@ -177,6 +177,10 @@ private:
     initial_to_result_distance_new_pub_;
   rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr
     sift_dist_sampling_search_pub_;//20230330
+  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr
+    tp_origin_pub_;//20230410
+  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr
+    tp_sampling_search_pub_;//20230410
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr ndt_marker_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
     ndt_monte_carlo_initial_pose_marker_pub_;

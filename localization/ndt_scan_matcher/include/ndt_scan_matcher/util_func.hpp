@@ -94,6 +94,8 @@ struct Compare_pose
   std::vector<Eigen::Matrix4f> vec_ndt_canditate;//canditate points
   std::vector<double> vec_shift;
   int which;//Confirm which was selected //If i=0,origin_pose was selected
+  double origin_tp;
+  double sampling_tp;
   //std::vector<Eigen::Matrix4f> vec_shift_matrix;
   //std::vector<pclomp::NdtResult> vec_ndt_canditates_rst;//result with considering random sampling
 };

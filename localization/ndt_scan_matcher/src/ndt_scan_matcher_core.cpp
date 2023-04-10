@@ -213,6 +213,12 @@ NDTScanMatcher::NDTScanMatcher()
   sift_dist_sampling_search_pub_ =
     this->create_publisher<tier4_debug_msgs::msg::Float32Stamped>(
       "sift_dist_sampling_search", 10);//20230330
+  tp_origin_pub_ =
+    this->create_publisher<tier4_debug_msgs::msg::Float32Stamped>(
+      "tp_origin", 10);//20230410
+  tp_sampling_search_pub_ =
+    this->create_publisher<tier4_debug_msgs::msg::Float32Stamped>(
+      "tp_sampling_search", 10);//20230410  
   ndt_marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("ndt_marker", 10);
   diagnostics_pub_ =
     this->create_publisher<diagnostic_msgs::msg::DiagnosticArray>("/diagnostics", 10);
@@ -380,9 +386,9 @@ void NDTScanMatcher::callback_sensor_points(
     pose_to_matrix4f(interpolator.get_current_pose().pose.pose);
   std::cout << "Here is the matrix initial_pose_matrix:\n" << initial_pose_matrix << std::endl;
   const auto output_cloud = std::make_shared<pcl::PointCloud<PointSource>>();//constを外した
-  //ndt_ptr_->align(*output_cloud, initial_pose_matrix);//ON・OFFで切り替える
-  ndt_ptr_->align(*output_cloud, sampling_search_.pose_update(initial_pose_matrix));//20230314
-  const pclomp::NdtResult ndt_result = ndt_ptr_->getResult();//constを外した
+  //ndt_ptr_->align(*output_cloud, initial_pose_matrix);//ON・OFFで切り替える  general-method
+  ndt_ptr_->align(*output_cloud, sampling_search_.pose_update(initial_pose_matrix));//tunnel patch
+  const pclomp::NdtResult ndt_result = ndt_ptr_->getResult();//ndt後の結果
   (*state_ptr_)["state"] = "Sleeping";
 
   const auto exe_end_time = std::chrono::system_clock::now();
@@ -491,7 +497,7 @@ void NDTScanMatcher::callback_sensor_points(
     (*state_ptr_)["is_local_optimal_solution_oscillation"] = "0";
   }
 
-  //20230322,20230330--------
+  //20230322,20230330,20230410--------↓
   //std::vector<pclomp::NdtResult> vec_ndt_canditates;
   //vec_ndt_canditates=sampling_search_.sampling_search(ndt_result.pose, ndt_result.transform_probability, sensor_points_baselinkTF_ptr,ndt_ptr_);
   Compare_pose compare_pose;
@@ -523,7 +529,12 @@ void NDTScanMatcher::callback_sensor_points(
   sift_dist_sampling_search_pub_->publish(
     make_float32_stamped(sensor_ros_time, f_dist));
 
-  //20230322,20230330--------
+  tp_origin_pub_->publish(
+  make_float32_stamped(sensor_ros_time, compare_pose.origin_tp));
+
+  tp_sampling_search_pub_->publish(
+    make_float32_stamped(sensor_ros_time, compare_pose.sampling_tp));
+  //20230322,20230330--------↑
   
 }
 
