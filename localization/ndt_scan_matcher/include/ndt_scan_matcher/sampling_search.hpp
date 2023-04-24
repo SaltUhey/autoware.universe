@@ -68,6 +68,9 @@ struct Sampling_search
     compare_pose.which=0;
     compare_pose.origin_tp=peak_tp;
 
+
+    //std::cerr << "Here is the matrix result_pose_matrix:\n" << result_pose_matrix << std::endl;
+
     for (int try_count = 0; try_count < 1; try_count++) {//
       dist = 6.0 * ((double)rand() / RAND_MAX - 0.5);//max 3?
       Eigen::Matrix4f shift_matrix = Eigen::Matrix4f::Identity(4, 4);
@@ -115,7 +118,6 @@ struct Sampling_search
     Eigen::Matrix4f new_pose;
     new_pose = origin * mc_slip_pose_;
 
-    std::cerr << "Here is the matrix mc_slip_pose_:\n" << mc_slip_pose_ << std::endl;//動いてる
     mc_slip_pose_ = Eigen::Matrix4f::Identity(4, 4);//new_poseとして、受け渡した後、初期化?
     return new_pose;
   }

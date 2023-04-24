@@ -205,6 +205,8 @@ void EKFLocalizer::timerCallback()
     DEBUG_INFO(get_logger(), "------------------------- end Twist -------------------------\n");
   }
 
+  z_filter_.update_z_add(ekf_.getXelement(IDX::VX),pitch_filter_.get_x());//10H to 50Hz z_filter_
+
   const double x = ekf_.getXelement(IDX::X);
   const double y = ekf_.getXelement(IDX::Y);
   const double z = z_filter_.get_x();
@@ -611,7 +613,8 @@ void EKFLocalizer::updateSimple1DFilters(const geometry_msgs::msg::PoseWithCovar
   double roll_dev = pose.pose.covariance[COV_IDX::ROLL_ROLL];
   double pitch_dev = pose.pose.covariance[COV_IDX::PITCH_PITCH];
 
-  z_filter_.update(z, z_dev, pose.header.stamp);
+  z_filter_.check_z_add=0;//20230417
+  z_filter_.update_z(z, z_dev, pose.header.stamp);//20230417
   roll_filter_.update(rpy.x, roll_dev, pose.header.stamp);
   pitch_filter_.update(rpy.y, pitch_dev, pose.header.stamp);
 }

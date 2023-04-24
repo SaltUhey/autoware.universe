@@ -65,14 +65,60 @@ public:
     dev_ = obs_dev;
     latest_time_ = time;
     initialized_ = true;
+    //20230417
+    k_10Hz=0.0;
+    k_50Hz=0.0;
+    check_z_add=0;
+    check_z=0;
     return;
   };
+
+  // void update_z_add(){
+  //   if (!initialized_) {
+  //     //init(obs, obs_dev, time);
+  //     return;
+  //   }
+
+  //   //k_50hz = (kalman_gain * (obs - x_)
+  //   k_50Hz = (k_10Hz/t_10Hz)*t_50Hz;
+  //   std::cerr << "k_50Hz:" << k_50Hz << std::endl;
+  //   x_ = x_ + k_50Hz;//50Hz timerCallbackの周期
+
+  //   std::cerr << "check_z_add in update_z_add():" << check_z_add << std::endl;
+  //   std::cerr << "check_z:" << check_z << std::endl;
+  //   check_z_add++;
+  //   check_z++;
+  //   return;
+  // };
+
+  void update_z_add(double vx, double pitch_rad){
+    if (!initialized_) {
+      //init(obs, obs_dev, time);
+      return;
+    }
+    static const double pi = 3.141592653589793;
+    double val_sin = -std::sin(pitch_rad);
+    const double t = 0.02;//50Hz timerCallbackの周期
+    std::cerr << "val_sin:" << val_sin << std::endl;
+    std::cerr << "pitch_deg:" << pitch_rad*(180/pi) <<"[degree]"<< std::endl;
+    std::cerr << "velocity:" << vx <<"[m/s]" <<std::endl;
+    double dz = val_sin*vx*t;
+    std::cerr << "dz:" << dz << std::endl;
+    x_ = x_ + dz;
+
+    std::cerr << "check_z_add in update_z_add():" << check_z_add << std::endl;
+    check_z_add++;
+
+    return;
+  };
+
   void update(const double obs, const double obs_dev, const rclcpp::Time time)
   {
     if (!initialized_) {
       init(obs, obs_dev, time);
       return;
     }
+
 
     // Prediction step (current stddev_)
     double dt = (time - latest_time_).seconds();
@@ -87,8 +133,38 @@ public:
     latest_time_ = time;
     return;
   };
+
+  void update_z(const double obs, const double obs_dev, const rclcpp::Time time)
+  {
+    if (!initialized_) {
+      init(obs, obs_dev, time);
+      return;
+    }
+
+    check_z_add=0;
+
+    // Prediction step (current stddev_)
+    double dt = (time - latest_time_).seconds();
+    double proc_dev_x_d = proc_dev_x_c_ * dt * dt;
+    dev_ = dev_ + proc_dev_x_d;
+
+    // Update step
+    double kalman_gain = dev_ / (dev_ + obs_dev);
+    //k_10Hz = kalman_gain * (obs - x_);
+    x_ = x_ + kalman_gain * (obs - x_);
+    dev_ = (1 - kalman_gain) * dev_;
+
+    latest_time_ = time;
+
+    std::cerr << "check_z:" << check_z << std::endl;
+    check_z++;
+
+    return;
+  };
+
   void set_proc_dev(const double proc_dev) { proc_dev_x_c_ = proc_dev; }
   double get_x() { return x_; }
+  int check_z_add=0;//20230417
 
 private:
   bool initialized_;
@@ -96,6 +172,11 @@ private:
   double dev_;
   double proc_dev_x_c_;
   rclcpp::Time latest_time_;
+  double k_10Hz;//20230417
+  double k_50Hz;//20230417
+  const double t_10Hz = 0.1;//10Hz
+  const double t_50Hz = 0.02;//10Hz
+  int check_z;
 };
 
 class EKFLocalizer : public rclcpp::Node

@@ -525,7 +525,7 @@ void NDTScanMatcher::callback_sensor_points(
 
   ////add function to publish "shift" 
   float f_dist=compare_pose.vec_shift[0];//メモリ外アクセスに注意
-  std::cerr << "f_dist:" << f_dist <<" m" << std::endl;
+  //std::cerr << "f_dist:" << f_dist <<" m" << std::endl;
   sift_dist_sampling_search_pub_->publish(
     make_float32_stamped(sensor_ros_time, f_dist));
 

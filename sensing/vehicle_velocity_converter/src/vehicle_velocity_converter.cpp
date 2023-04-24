@@ -20,7 +20,7 @@ VehicleVelocityConverter::VehicleVelocityConverter() : Node("vehicle_velocity_co
   stddev_vx_ = declare_parameter("velocity_stddev_xx", 0.2);
   stddev_wz_ = declare_parameter("angular_velocity_stddev_zz", 0.1);
   frame_id_ = declare_parameter("frame_id", "base_link");
-  speed_scale_factor_ = declare_parameter("speed_scale_factor", 1.0);
+  speed_scale_factor_ = declare_parameter("speed_scale_factor", 1.0);//20230410 change this for experiment
 
   vehicle_report_sub_ = create_subscription<autoware_auto_vehicle_msgs::msg::VelocityReport>(
     "velocity_status", rclcpp::QoS{100},
