@@ -79,14 +79,14 @@ public:
       //init(obs, obs_dev, time);
       return;
     }
-    static const double pi = 3.141592653589793;
+    //static const double pi = 3.141592653589793;
     double val_sin = -std::sin(pitch_rad);
-    const double t = 0.02;//50Hz timerCallbackの周期
-    std::cerr << "pitch_deg(update_z_add):" << pitch_rad*(180/pi) <<"[degree]"<< std::endl;
+    const double t = 0.02f;//50Hz timerCallbackの周期
+    //std::cerr << "pitch_deg(update_z_add):" << pitch_rad*(180/pi) <<"[degree]"<< std::endl;
     // std::cerr << "val_sin:" << val_sin << std::endl;    
     // std::cerr << "velocity:" << vx <<"[m/s]" <<std::endl;
     double dz = val_sin*vx*t;
-    //std::cerr << "dz:" << dz << std::endl;
+    std::cerr << "dz(update_z_add):" << dz <<"[m]" <<std::endl;
     x_ = x_ + dz;
 
     //std::cerr << "check_z_add in update_z_add():" << check_z_add << std::endl;
@@ -219,7 +219,8 @@ private:
   double ekf_rate_;
   double ekf_dt_;
 
-  double pitch_use_ndt; //20230515
+  double pitch_from_ekf;//20230515
+  double pitch_from_ndt;//20230522
 
   /* parameters */
 
