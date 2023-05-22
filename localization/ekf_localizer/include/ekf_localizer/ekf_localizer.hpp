@@ -73,23 +73,6 @@ public:
     return;
   };
 
-  // void update_z_add(){
-  //   if (!initialized_) {
-  //     //init(obs, obs_dev, time);
-  //     return;
-  //   }
-
-  //   //k_50hz = (kalman_gain * (obs - x_)
-  //   k_50Hz = (k_10Hz/t_10Hz)*t_50Hz;
-  //   std::cerr << "k_50Hz:" << k_50Hz << std::endl;
-  //   x_ = x_ + k_50Hz;//50Hz timerCallbackの周期
-
-  //   std::cerr << "check_z_add in update_z_add():" << check_z_add << std::endl;
-  //   std::cerr << "check_z:" << check_z << std::endl;
-  //   check_z_add++;
-  //   check_z++;
-  //   return;
-  // };
 
   void update_z_add(double vx, double pitch_rad){
     if (!initialized_) {
@@ -99,14 +82,14 @@ public:
     static const double pi = 3.141592653589793;
     double val_sin = -std::sin(pitch_rad);
     const double t = 0.02;//50Hz timerCallbackの周期
-    std::cerr << "val_sin:" << val_sin << std::endl;
-    std::cerr << "pitch_deg:" << pitch_rad*(180/pi) <<"[degree]"<< std::endl;
-    std::cerr << "velocity:" << vx <<"[m/s]" <<std::endl;
+    std::cerr << "pitch_deg(update_z_add):" << pitch_rad*(180/pi) <<"[degree]"<< std::endl;
+    // std::cerr << "val_sin:" << val_sin << std::endl;    
+    // std::cerr << "velocity:" << vx <<"[m/s]" <<std::endl;
     double dz = val_sin*vx*t;
-    std::cerr << "dz:" << dz << std::endl;
+    //std::cerr << "dz:" << dz << std::endl;
     x_ = x_ + dz;
 
-    std::cerr << "check_z_add in update_z_add():" << check_z_add << std::endl;
+    //std::cerr << "check_z_add in update_z_add():" << check_z_add << std::endl;
     check_z_add++;
 
     return;
@@ -156,7 +139,7 @@ public:
 
     latest_time_ = time;
 
-    std::cerr << "check_z:" << check_z << std::endl;
+    //std::cerr << "check_z:" << check_z << std::endl;
     check_z++;
 
     return;
@@ -235,6 +218,8 @@ private:
 
   double ekf_rate_;
   double ekf_dt_;
+
+  double pitch_use_ndt; //20230515
 
   /* parameters */
 
@@ -341,6 +326,8 @@ private:
    * @brief initialize simple1DFilter
    */
   void initSimple1DFilters(const geometry_msgs::msg::PoseWithCovarianceStamped & pose);
+
+  double considering_ndt_delay_z(/*const geometry_msgs::msg::PoseWithCovarianceStamped & pose,*/geometry_msgs::msg::TwistStamped twist, double delay_time);
 
   /**
    * @brief trigger node

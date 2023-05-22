@@ -205,10 +205,14 @@ void EKFLocalizer::timerCallback()
     DEBUG_INFO(get_logger(), "------------------------- end Twist -------------------------\n");
   }
 
-  z_filter_.update_z_add(ekf_.getXelement(IDX::VX),pitch_filter_.get_x());//10H to 50Hz z_filter_
-
   const double x = ekf_.getXelement(IDX::X);
+  //std::cerr << "x(before):" << x<< std::endl;
+  // x = x_consider_pitch(x,ekf_.getXelement(IDX::VX),pitch_filter_.get_x());//2020508
+  //std::cerr << "x(after):" << x<< std::endl;
+
   const double y = ekf_.getXelement(IDX::Y);
+
+  z_filter_.update_z_add(ekf_.getXelement(IDX::VX),pitch_filter_.get_x());//10H to 50Hz z_filter_
   const double z = z_filter_.get_x();
 
   const double biased_yaw = ekf_.getXelement(IDX::YAW);
@@ -216,6 +220,7 @@ void EKFLocalizer::timerCallback()
 
   const double roll = roll_filter_.get_x();
   const double pitch = pitch_filter_.get_x();
+  //pitch_use_ndt = pitch;
   const double yaw = biased_yaw + yaw_bias;
   const double vx = ekf_.getXelement(IDX::VX);
   const double wz = ekf_.getXelement(IDX::WZ);
@@ -396,7 +401,7 @@ void EKFLocalizer::measurementUpdatePose(const geometry_msgs::msg::PoseWithCovar
   const rclcpp::Time t_curr = this->now();
 
   /* Calculate delay step */
-  double delay_time = (t_curr - pose.header.stamp).seconds() + params_.pose_additional_delay;
+  double delay_time = (t_curr - pose.header.stamp).seconds() + params_.pose_additional_delay;//20230515 hppに定義書いた
   if (delay_time < 0.0) {
     warning_.warnThrottle(poseDelayTimeWarningMessage(delay_time), 1000);
   }
@@ -604,6 +609,7 @@ void EKFLocalizer::publishEstimateResult()
 
 void EKFLocalizer::updateSimple1DFilters(const geometry_msgs::msg::PoseWithCovarianceStamped & pose)
 {
+  
   double z = pose.pose.pose.position.z;
 
   const auto rpy = tier4_autoware_utils::getRPY(pose.pose.pose.orientation);
@@ -613,10 +619,22 @@ void EKFLocalizer::updateSimple1DFilters(const geometry_msgs::msg::PoseWithCovar
   double roll_dev = pose.pose.covariance[COV_IDX::ROLL_ROLL];
   double pitch_dev = pose.pose.covariance[COV_IDX::PITCH_PITCH];
 
-  z_filter_.check_z_add=0;//20230417
-  z_filter_.update_z(z, z_dev, pose.header.stamp);//20230417
+  //z_filter_.update_z(z, z_dev, pose.header.stamp);//20230417
   roll_filter_.update(rpy.x, roll_dev, pose.header.stamp);
   pitch_filter_.update(rpy.y, pitch_dev, pose.header.stamp);
+
+  pitch_use_ndt = pitch_filter_.get_x();
+
+  //here 遅延を考慮したpose修正
+  const rclcpp::Time t_curr = this->now();
+  /* Calculate delay step */
+  double delay_time = (t_curr - pose.header.stamp).seconds();
+  double dz = considering_ndt_delay_z(/*pose,*/current_ekf_twist_,delay_time);//dz 求めて、update_zで足す
+
+  z_filter_.check_z_add=0;//20230417
+
+  z_filter_.update_z(z+dz, z_dev, pose.header.stamp);//20230515
+  
 }
 
 void EKFLocalizer::initSimple1DFilters(const geometry_msgs::msg::PoseWithCovarianceStamped & pose)
@@ -633,6 +651,34 @@ void EKFLocalizer::initSimple1DFilters(const geometry_msgs::msg::PoseWithCovaria
   z_filter_.init(z, z_dev, pose.header.stamp);
   roll_filter_.init(rpy.x, roll_dev, pose.header.stamp);
   pitch_filter_.init(rpy.y, pitch_dev, pose.header.stamp);
+}
+
+double EKFLocalizer::considering_ndt_delay_z(
+  /*const geometry_msgs::msg::PoseWithCovarianceStamped & pose,*/geometry_msgs::msg::TwistStamped twist, double delay_time)
+{
+  static const double pi = 3.141592653589793;
+  double vx = twist.twist.linear.x;
+  //double pitch_rad = pose.pose.pose.orientation.y;
+  double pitch_rad = pitch_use_ndt;
+
+  double val_sin = std::sin(-pitch_rad);
+  //double val_cos = std::cos(-pitch_rad);
+  std::cerr << "delay_time:" << delay_time <<"[s]"<< std::endl;
+  std::cerr << "pitch_deg:" << pitch_rad*(180/pi) <<"[degree]"<< std::endl;
+  std::cerr << "val_sin:" << val_sin << std::endl;
+  //std::cerr << "val_cos:" << val_cos << std::endl;
+  std::cerr << "velocity:" << (vx*3600)/1000 <<"[km/h]" <<std::endl;
+  //double dx = val_cos*vx*delay_time;
+  double dz = val_sin*vx*delay_time;
+  //std::cerr << "dx(considering_ndt_delay):" << dx <<"[m]" <<std::endl;
+  std::cerr << "dz(considering_ndt_delay):" << dz <<"[m]" <<std::endl;
+  
+  // double x = pose.pose.pose.position.x;
+  // double z = pose.pose.pose.position.z;
+  // //double x = current_ekf_pose_.pose.position.x;
+  // current_ekf_pose_.pose.position = tier4_autoware_utils::createPoint(x+dx, pose.pose.pose.position.y, z+dz);
+
+  return dz;
 }
 
 /**

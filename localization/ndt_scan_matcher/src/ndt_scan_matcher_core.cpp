@@ -386,8 +386,8 @@ void NDTScanMatcher::callback_sensor_points(
     pose_to_matrix4f(interpolator.get_current_pose().pose.pose);
   std::cout << "Here is the matrix initial_pose_matrix:\n" << initial_pose_matrix << std::endl;
   const auto output_cloud = std::make_shared<pcl::PointCloud<PointSource>>();//constを外した
-  //ndt_ptr_->align(*output_cloud, initial_pose_matrix);//ON・OFFで切り替える  general-method
-  ndt_ptr_->align(*output_cloud, sampling_search_.pose_update(initial_pose_matrix));//tunnel patch
+  ndt_ptr_->align(*output_cloud, initial_pose_matrix);//ON・OFFで切り替える  general-method
+  //ndt_ptr_->align(*output_cloud, sampling_search_.pose_update(initial_pose_matrix));//tunnel patch
   const pclomp::NdtResult ndt_result = ndt_ptr_->getResult();//ndt後の結果
   (*state_ptr_)["state"] = "Sleeping";
 
