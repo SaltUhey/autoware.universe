@@ -73,28 +73,6 @@ public:
     return;
   };
 
-
-  void update_z_add(double vx, double pitch_rad){
-    if (!initialized_) {
-      //init(obs, obs_dev, time);
-      return;
-    }
-    //static const double pi = 3.141592653589793;
-    double val_sin = -std::sin(pitch_rad);
-    const double t = 0.02f;//50Hz timerCallbackの周期
-    //std::cerr << "pitch_deg(update_z_add):" << pitch_rad*(180/pi) <<"[degree]"<< std::endl;
-    // std::cerr << "val_sin:" << val_sin << std::endl;    
-    // std::cerr << "velocity:" << vx <<"[m/s]" <<std::endl;
-    double dz = val_sin*vx*t;
-    std::cerr << "dz(update_z_add):" << dz <<"[m]" <<std::endl;
-    x_ = x_ + dz;
-
-    //std::cerr << "check_z_add in update_z_add():" << check_z_add << std::endl;
-    check_z_add++;
-
-    return;
-  };
-
   void update(const double obs, const double obs_dev, const rclcpp::Time time)
   {
     if (!initialized_) {
@@ -141,6 +119,44 @@ public:
 
     //std::cerr << "check_z:" << check_z << std::endl;
     check_z++;
+
+    return;
+  };
+
+  void update_z_add(double vx, double pitch_rad){
+    if (!initialized_) {
+      //init(obs, obs_dev, time);
+      return;
+    }
+    //static const double pi = 3.141592653589793;
+    double val_sin = -std::sin(pitch_rad);
+    const double t = 0.02f;//50Hz timerCallbackの周期
+    //std::cerr << "pitch_deg(update_z_add):" << pitch_rad*(180/pi) <<"[degree]"<< std::endl;
+    // std::cerr << "val_sin:" << val_sin << std::endl;    
+    // std::cerr << "velocity:" << vx <<"[m/s]" <<std::endl;
+    double dz = val_sin*vx*t;
+    //std::cerr << "dz(update_z_add):" << dz <<"[m]" <<std::endl;
+    x_ = x_ + dz;
+
+    //std::cerr << "check_z_add in update_z_add():" << check_z_add << std::endl;
+    check_z_add++;
+
+    return;
+  };
+
+
+  void update_pitch_add(double pitch_rate){
+    if (!initialized_) {
+      //init(obs, obs_dev, time);
+      return;
+    }
+    static const double pi = 3.141592653589793;
+    const double t = 0.02;//50Hz timerCallbackの周期
+    
+    double dp = pitch_rate*t;
+    std::cerr << "dp(update_pitch_add):" << dp <<"[rad]" <<std::endl;
+    std::cerr << "dp(update_pitch_add):" << dp*(180/pi) <<"[degree]" <<std::endl;
+    x_ = x_ + dp;
 
     return;
   };
@@ -221,6 +237,7 @@ private:
 
   double pitch_from_ekf;//20230515
   double pitch_from_ndt;//20230522
+  double pitch_rate;//20230605
 
   /* parameters */
 

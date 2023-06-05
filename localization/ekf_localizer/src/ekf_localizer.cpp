@@ -212,15 +212,17 @@ void EKFLocalizer::timerCallback()
 
   const double y = ekf_.getXelement(IDX::Y);
 
-  //z_filter_.update_z_add(ekf_.getXelement(IDX::VX),pitch_filter_.get_x());//10Hz to 50Hz z_filter_
-  z_filter_.update_z_add(ekf_.getXelement(IDX::VX),pitch_from_ndt);//10Hz to 50Hz z_filter_
+  pitch_filter_.update_pitch_add(pitch_rate);
+  const double pitch = pitch_filter_.get_x();
+
+  z_filter_.update_z_add(ekf_.getXelement(IDX::VX),pitch);//10Hz to 50Hz z_filter_
   const double z = z_filter_.get_x();
 
   const double biased_yaw = ekf_.getXelement(IDX::YAW);
   const double yaw_bias = ekf_.getXelement(IDX::YAWB);
 
   const double roll = roll_filter_.get_x();
-  const double pitch = pitch_filter_.get_x();
+  // const double pitch = pitch_filter_.get_x();
   const double yaw = biased_yaw + yaw_bias;
   const double vx = ekf_.getXelement(IDX::VX);
   const double wz = ekf_.getXelement(IDX::WZ);
@@ -474,6 +476,10 @@ void EKFLocalizer::measurementUpdateTwist(
       "twist frame_id must be base_link");
   }
 
+  pitch_rate= twist.twist.twist.angular.y;//20230605
+  std::cerr << "pitch_rate:" << pitch_rate <<"[rad/s]"<< std::endl;
+  std::cerr << "pitch_deg(calculated from angular velocity):" << pitch_rate*0.02 <<"[rad] (" << pitch_rate*0.02*3.14 << "[degree])"<< std::endl;
+
   const Eigen::MatrixXd X_curr = ekf_.getLatestX();
   DEBUG_PRINT_MAT(X_curr.transpose());
 
@@ -658,22 +664,22 @@ void EKFLocalizer::initSimple1DFilters(const geometry_msgs::msg::PoseWithCovaria
 double EKFLocalizer::considering_ndt_delay_z(
   /*const geometry_msgs::msg::PoseWithCovarianceStamped & pose,*/geometry_msgs::msg::TwistStamped twist, double delay_time)
 {
-  static const double pi = 3.141592653589793;
+  //static const double pi = 3.141592653589793;
   double vx = twist.twist.linear.x;
   //double pitch_rad = pose.pose.pose.orientation.y;
   double pitch_rad = pitch_from_ndt;
 
   double val_sin = std::sin(-pitch_rad);
   //double val_cos = std::cos(-pitch_rad);
-  std::cerr << "delay_time:" << delay_time <<"[s]"<< std::endl;
-  std::cerr << "pitch_deg:" << pitch_rad*(180/pi) <<"[degree]"<< std::endl;
-  std::cerr << "val_sin:" << val_sin << std::endl;
-  //std::cerr << "val_cos:" << val_cos << std::endl;
-  std::cerr << "velocity:" << (vx*3600)/1000 <<"[km/h]" <<std::endl;
+  // std::cerr << "delay_time:" << delay_time <<"[s]"<< std::endl;
+  // std::cerr << "pitch_deg:" << pitch_rad*(180/pi) <<"[degree]"<< std::endl;
+  // std::cerr << "val_sin:" << val_sin << std::endl;
+  // std::cerr << "val_cos:" << val_cos << std::endl;
+  //std::cerr << "velocity:" << (vx*3600)/1000 <<"[km/h]" <<std::endl;
   //double dx = val_cos*vx*delay_time;
   double dz = val_sin*vx*delay_time;
   //std::cerr << "dx(considering_ndt_delay):" << dx <<"[m]" <<std::endl;
-  std::cerr << "dz(considering_ndt_delay):" << dz <<"[m]" <<std::endl;
+  //std::cerr << "dz(considering_ndt_delay):" << dz <<"[m]" <<std::endl;
   
   // double x = pose.pose.pose.position.x;
   // double z = pose.pose.pose.position.z;
