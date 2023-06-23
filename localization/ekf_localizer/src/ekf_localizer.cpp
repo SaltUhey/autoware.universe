@@ -213,9 +213,10 @@ void EKFLocalizer::timerCallback()
   const double y = ekf_.getXelement(IDX::Y);
 
   pitch_filter_.update_pitch_add(pitch_rate);
+
   const double pitch = pitch_filter_.get_x();
 
-  z_filter_.update_z_add(ekf_.getXelement(IDX::VX),pitch);//10Hz to 50Hz z_filter_
+  z_filter_.update_z_add(ekf_.getXelement(IDX::VX),pitch);//proposed method
   const double z = z_filter_.get_x();
 
   const double biased_yaw = ekf_.getXelement(IDX::YAW);
@@ -353,9 +354,19 @@ void EKFLocalizer::callbackPoseWithCovariance(
     return;
   }
 
+  //here 遅延を考慮したpose修正　これの位置がおかしいかも20230623
+  const rclcpp::Time t_curr = this->now();
+  /* Calculate delay step */
+  double delay_time = (t_curr - msg->header.stamp).seconds();
+  double dz_delay = considering_ndt_delay_z(/*pose,*/current_ekf_twist_,delay_time);
+
+  //z_filter_.check_z_add=0;//20230417
+
+  msg->pose.pose.position.z+=dz_delay;
+
   pose_queue_.push(msg);
 
-  updateSimple1DFilters(*msg);
+  //updateSimple1DFilters(*msg);//20230619
 }
 
 /*
@@ -457,6 +468,8 @@ void EKFLocalizer::measurementUpdatePose(const geometry_msgs::msg::PoseWithCovar
     poseMeasurementCovariance(pose.pose.covariance, params_.pose_smoothing_steps);
 
   ekf_.updateWithDelay(y, C, R, delay_step);
+
+  updateSimple1DFilters(pose, params_.pose_smoothing_steps);//20230619
 
   // debug
   const Eigen::MatrixXd X_result = ekf_.getLatestX();
@@ -613,7 +626,11 @@ void EKFLocalizer::publishEstimateResult()
   pub_debug_->publish(msg);
 }
 
-void EKFLocalizer::updateSimple1DFilters(const geometry_msgs::msg::PoseWithCovarianceStamped & pose)
+//20230619
+//void EKFLocalizer::updateSimple1DFilters(const geometry_msgs::msg::PoseWithCovarianceStamped & pose)
+void EKFLocalizer::updateSimple1DFilters(
+  const geometry_msgs::msg::PoseWithCovarianceStamped & pose,
+  const size_t smoothing_step)
 {
  
   double z = pose.pose.pose.position.z;
@@ -623,26 +640,23 @@ void EKFLocalizer::updateSimple1DFilters(const geometry_msgs::msg::PoseWithCovar
   pitch_from_ndt = rpy.y;//20230522
 
   using COV_IDX = tier4_autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  double z_dev = pose.pose.covariance[COV_IDX::Z_Z];
-  double roll_dev = pose.pose.covariance[COV_IDX::ROLL_ROLL];
-  double pitch_dev = pose.pose.covariance[COV_IDX::PITCH_PITCH];
 
-  //z_filter_.update_z(z, z_dev, pose.header.stamp);//20230417
+  //20230619
+  // double z_dev = pose.pose.covariance[COV_IDX::Z_Z];
+  // double roll_dev = pose.pose.covariance[COV_IDX::ROLL_ROLL];
+  // double pitch_dev = pose.pose.covariance[COV_IDX::PITCH_PITCH];
+  double z_dev = pose.pose.covariance[COV_IDX::Z_Z] * static_cast<double>(smoothing_step);
+  double roll_dev = pose.pose.covariance[COV_IDX::ROLL_ROLL] * static_cast<double>(smoothing_step);
+  double pitch_dev = pose.pose.covariance[COV_IDX::PITCH_PITCH] * static_cast<double>(smoothing_step);
+
+
+  z_filter_.update(z, z_dev, pose.header.stamp);//20230417
   roll_filter_.update(rpy.x, roll_dev, pose.header.stamp);
   pitch_filter_.update(rpy.y, pitch_dev, pose.header.stamp);
 
-  pitch_from_ekf = pitch_filter_.get_x();
-
-  //here 遅延を考慮したpose修正
-  const rclcpp::Time t_curr = this->now();
-  /* Calculate delay step */
-  double delay_time = (t_curr - pose.header.stamp).seconds();
-  double dz = considering_ndt_delay_z(/*pose,*/current_ekf_twist_,delay_time);//dz 求めて、update_zで足す
-
-  z_filter_.check_z_add=0;//20230417
-
-  z_filter_.update_z(z+dz, z_dev, pose.header.stamp);//20230515
   
+
+  //z_filter_.update_z(z+dz_delay, z_dev, pose.header.stamp);//20230619
 }
 
 void EKFLocalizer::initSimple1DFilters(const geometry_msgs::msg::PoseWithCovarianceStamped & pose)
@@ -678,6 +692,7 @@ double EKFLocalizer::considering_ndt_delay_z(
   //std::cerr << "velocity:" << (vx*3600)/1000 <<"[km/h]" <<std::endl;
   //double dx = val_cos*vx*delay_time;
   double dz = val_sin*vx*delay_time;
+  //dz = dz/smoothing_step;
   //std::cerr << "dx(considering_ndt_delay):" << dx <<"[m]" <<std::endl;
   //std::cerr << "dz(considering_ndt_delay):" << dz <<"[m]" <<std::endl;
   
