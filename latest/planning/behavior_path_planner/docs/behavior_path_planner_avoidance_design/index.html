@@ -17,7 +17,7 @@
         <link rel="next" href="../behavior_path_planner_drivable_area_design/">
       
       <link rel="icon" href="../../../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.19">
+      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.20">
     
     
       
@@ -5708,6 +5708,8 @@
         
           
         
+          
+        
       
       
         
@@ -5848,14 +5850,14 @@
         
         
         <div class="md-nav__link md-nav__link--index ">
-          <a href="../../../../localization/yabloc/yabloc_particle_filter/">Yabloc particle filter</a>
+          <a href="../../../../localization/yabloc/yabloc_monitor/">Yabloc monitor</a>
           
         </div>
       
       <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_10_4_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_5_10_4">
           <span class="md-nav__icon md-icon"></span>
-          Yabloc particle filter
+          Yabloc monitor
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -5894,12 +5896,58 @@
         
         
         <div class="md-nav__link md-nav__link--index ">
-          <a href="../../../../localization/yabloc/yabloc_pose_initializer/">Yabloc pose initializer</a>
+          <a href="../../../../localization/yabloc/yabloc_particle_filter/">Yabloc particle filter</a>
           
         </div>
       
       <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_10_5_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_5_10_5">
+          <span class="md-nav__icon md-icon"></span>
+          Yabloc particle filter
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+      
+      
+        
+      
+      <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_10_6" >
+      
+      
+        
+          
+            
+          
+        
+      
+      
+        
+        
+        <div class="md-nav__link md-nav__link--index ">
+          <a href="../../../../localization/yabloc/yabloc_pose_initializer/">Yabloc pose initializer</a>
+          
+        </div>
+      
+      <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_10_6_label" aria-expanded="false">
+        <label class="md-nav__title" for="__nav_5_10_6">
           <span class="md-nav__icon md-icon"></span>
           Yabloc pose initializer
         </label>
@@ -14146,13 +14194,17 @@
       
         
           
+            
+          
         
       
       
-        <label class="md-nav__link" for="__nav_11_13" id="__nav_11_13_label" tabindex="0">
-          Topic state monitor
-          <span class="md-nav__icon md-icon"></span>
-        </label>
+        
+        
+        <div class="md-nav__link md-nav__link--index ">
+          <a href="../../../../system/topic_state_monitor/">Topic state monitor</a>
+          
+        </div>
       
       <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_11_13_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_11_13">
@@ -14161,18 +14213,6 @@
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../../system/topic_state_monitor/Readme/" class="md-nav__link">
-        topic_state_monitor
-      </a>
-    </li>
-  
-
             
           
         </ul>
@@ -15229,13 +15269,20 @@ To solve that, this module provides a parameter for the minimum avoidance speed,
 <p>The hatched road marking is defined on Lanelet map. See <a href="https://github.com/autowarefoundation/autoware_common/blob/main/tmp/lanelet2_extension/docs/lanelet2_format_extension.md#hatched-road-markings-area">here</a></p>
 <p><img alt="fig1" src="../../image/avoidance/use_hatched_road_markings.svg"></p>
 <h3 id="safety-check">Safety check<a class="headerlink" href="#safety-check" title="Permanent link">#</a></h3>
-<p>The avoidance module has a safety check logic. The result of safe check is used for yield maneuver. It is enable by setting <code>enable_safety_check</code> as <code>true</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">enable_safety_check</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<p>The avoidance module has a safety check logic. The result of safe check is used for yield maneuver. It is enable by setting <code>enable</code> as <code>true</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># safety check configuration</span>
+<span class="nt">enable</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># [-]</span>
+<span class="nt">check_current_lane</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># [-]</span>
+<span class="nt">check_shift_side_lane</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># [-]</span>
+<span class="nt">check_other_side_lane</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># [-]</span>
+<span class="nt">check_unavoidable_object</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># [-]</span>
+<span class="nt">check_other_object</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># [-]</span>
 
-<span class="c1"># For safety check</span>
+<span class="c1"># collision check parameters</span>
+<span class="nt">check_all_predicted_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># [-]</span>
+<span class="nt">time_horizon</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10.0</span><span class="w"> </span><span class="c1"># [s]</span>
+<span class="nt">idling_time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.5</span><span class="w"> </span><span class="c1"># [s]</span>
 <span class="nt">safety_check_backward_distance</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50.0</span><span class="w"> </span><span class="c1"># [m]</span>
-<span class="nt">safety_check_time_horizon</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10.0</span><span class="w"> </span><span class="c1"># [s]</span>
-<span class="nt">safety_check_idling_time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.5</span><span class="w"> </span><span class="c1"># [s]</span>
 <span class="nt">safety_check_accel_for_rss</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.5</span><span class="w"> </span><span class="c1"># [m/ss]</span>
 </code></pre></div>
 <p><img alt="fig1" src="../../image/avoidance/safety_check_flowchart.svg"></p>
@@ -15355,13 +15402,6 @@ SHIFT_{current} &gt; L_{threshold}
 <td align="left">false</td>
 </tr>
 <tr>
-<td align="left">enable_safety_check</td>
-<td align="left">[-]</td>
-<td align="left">bool</td>
-<td align="left">Flag to enable safety check.</td>
-<td align="left">false</td>
-</tr>
-<tr>
 <td align="left">enable_yield_maneuver</td>
 <td align="left">[-]</td>
 <td align="left">bool</td>
@@ -15377,7 +15417,6 @@ SHIFT_{current} &gt; L_{threshold}
 </tr>
 </tbody>
 </table>
-<p><strong>NOTE:</strong> It has to set both <code>enable_safety_check</code> and <code>enable_yield_maneuver</code> to enable yield maneuver.</p>
 <table>
 <thead>
 <tr>
@@ -15661,32 +15700,74 @@ SHIFT_{current} &gt; L_{threshold}
 </thead>
 <tbody>
 <tr>
-<td align="left">safety_check_backward_distance</td>
-<td>[m]</td>
-<td>double</td>
-<td>Backward distance to search the dynamic objects.</td>
-<td>50.0</td>
+<td align="left">enable</td>
+<td>[-]</td>
+<td>bool</td>
+<td>Enable to use safety check feature.</td>
+<td>true</td>
 </tr>
 <tr>
-<td align="left">safety_check_time_horizon</td>
+<td align="left">check_current_lane</td>
+<td>[-]</td>
+<td>bool</td>
+<td>Check objects on current driving lane.</td>
+<td>false</td>
+</tr>
+<tr>
+<td align="left">check_shift_side_lane</td>
+<td>[-]</td>
+<td>bool</td>
+<td>Check objects on shift side lane.</td>
+<td>true</td>
+</tr>
+<tr>
+<td align="left">check_other_side_lane</td>
+<td>[-]</td>
+<td>bool</td>
+<td>Check objects on other side lane.</td>
+<td>false</td>
+</tr>
+<tr>
+<td align="left">check_unavoidable_object</td>
+<td>[-]</td>
+<td>bool</td>
+<td>Check collision between ego and unavoidable objects.</td>
+<td>false</td>
+</tr>
+<tr>
+<td align="left">check_other_object</td>
+<td>[-]</td>
+<td>bool</td>
+<td>Check collision between ego and non avoidance target objects.</td>
+<td>false</td>
+</tr>
+<tr>
+<td align="left">check_all_predicted_path</td>
+<td>[-]</td>
+<td>bool</td>
+<td>Check all prediction path of safety check target objects.</td>
+<td>false</td>
+</tr>
+<tr>
+<td align="left">time_horizon</td>
 <td>[s]</td>
 <td>double</td>
 <td>Time horizon to check lateral/longitudinal margin is enough or not.</td>
 <td>10.0</td>
 </tr>
 <tr>
-<td align="left">safety_check_idling_time</td>
-<td>[t]</td>
+<td align="left">time_resolution</td>
+<td>[s]</td>
 <td>double</td>
-<td>Time delay constant that be use for longitudinal margin calculation based on RSS.</td>
-<td>1.5</td>
+<td>Time resolution to check lateral/longitudinal margin is enough or not.</td>
+<td>0.5</td>
 </tr>
 <tr>
-<td align="left">safety_check_accel_for_rss</td>
-<td>[m/ss]</td>
+<td align="left">safety_check_backward_distance</td>
+<td>[m]</td>
 <td>double</td>
-<td>Accel constant that be used for longitudinal margin calculation based on RSS.</td>
-<td>2.5</td>
+<td>Backward distance to search the dynamic objects.</td>
+<td>50.0</td>
 </tr>
 <tr>
 <td align="left">safety_check_hysteresis_factor</td>

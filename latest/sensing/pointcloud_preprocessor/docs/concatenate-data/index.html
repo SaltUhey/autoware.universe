@@ -17,7 +17,7 @@
         <link rel="next" href="../crop-box-filter/">
       
       <link rel="icon" href="../../../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.19">
+      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.20">
     
     
       
@@ -5708,6 +5708,8 @@
         
           
         
+          
+        
       
       
         
@@ -5848,14 +5850,14 @@
         
         
         <div class="md-nav__link md-nav__link--index ">
-          <a href="../../../../localization/yabloc/yabloc_particle_filter/">Yabloc particle filter</a>
+          <a href="../../../../localization/yabloc/yabloc_monitor/">Yabloc monitor</a>
           
         </div>
       
       <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_10_4_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_5_10_4">
           <span class="md-nav__icon md-icon"></span>
-          Yabloc particle filter
+          Yabloc monitor
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -5894,12 +5896,58 @@
         
         
         <div class="md-nav__link md-nav__link--index ">
-          <a href="../../../../localization/yabloc/yabloc_pose_initializer/">Yabloc pose initializer</a>
+          <a href="../../../../localization/yabloc/yabloc_particle_filter/">Yabloc particle filter</a>
           
         </div>
       
       <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_10_5_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_5_10_5">
+          <span class="md-nav__icon md-icon"></span>
+          Yabloc particle filter
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+      
+      
+        
+      
+      <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_10_6" >
+      
+      
+        
+          
+            
+          
+        
+      
+      
+        
+        
+        <div class="md-nav__link md-nav__link--index ">
+          <a href="../../../../localization/yabloc/yabloc_pose_initializer/">Yabloc pose initializer</a>
+          
+        </div>
+      
+      <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_10_6_label" aria-expanded="false">
+        <label class="md-nav__title" for="__nav_5_10_6">
           <span class="md-nav__icon md-icon"></span>
           Yabloc pose initializer
         </label>
@@ -12072,6 +12120,33 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#actual-usage" class="md-nav__link">
+    Actual Usage
+  </a>
+  
+    <nav class="md-nav" aria-label="Actual Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-to-tuning-timeout_sec-and-input_offset" class="md-nav__link">
+    How to tuning timeout_sec and input_offset
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#node-separation-options-for-future" class="md-nav__link">
+    Node separation options for future
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#assumptions-known-limits" class="md-nav__link">
     Assumptions / Known limits
   </a>
@@ -13921,13 +13996,17 @@
       
         
           
+            
+          
         
       
       
-        <label class="md-nav__link" for="__nav_11_13" id="__nav_11_13_label" tabindex="0">
-          Topic state monitor
-          <span class="md-nav__icon md-icon"></span>
-        </label>
+        
+        
+        <div class="md-nav__link md-nav__link--index ">
+          <a href="../../../../system/topic_state_monitor/">Topic state monitor</a>
+          
+        </div>
       
       <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_11_13_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_11_13">
@@ -13936,18 +14015,6 @@
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../../system/topic_state_monitor/Readme/" class="md-nav__link">
-        topic_state_monitor
-      </a>
-    </li>
-  
-
             
           
         </ul>
@@ -14573,6 +14640,33 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#actual-usage" class="md-nav__link">
+    Actual Usage
+  </a>
+  
+    <nav class="md-nav" aria-label="Actual Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-to-tuning-timeout_sec-and-input_offset" class="md-nav__link">
+    How to tuning timeout_sec and input_offset
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#node-separation-options-for-future" class="md-nav__link">
+    Node separation options for future
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#assumptions-known-limits" class="md-nav__link">
     Assumptions / Known limits
   </a>
@@ -14693,8 +14787,57 @@
 <td>0.1</td>
 <td>tolerance of time to publish next pointcloud [s]<br>When this time limit is exceeded, the filter concatenates and publishes pointcloud, even if not all the point clouds are subscribed.</td>
 </tr>
+<tr>
+<td><code>input_offset</code></td>
+<td>vector of double</td>
+<td>[]</td>
+<td>This parameter can control waiting time for each input sensor pointcloud [s]. You must to set the same length of offsets with input pointclouds numbers. <br> For its tuning, please see <a href="#how-to-tuning-timeout_sec-and-input_offset">actual usage page</a>.</td>
+</tr>
+<tr>
+<td><code>publish_synchronized_pointcloud</code></td>
+<td>bool</td>
+<td>false</td>
+<td>If true, publish the time synchronized pointclouds. All input pointclouds are transformed and then re-published as message named <code>&lt;original_msg_name&gt;_synchronized</code>.</td>
+</tr>
 </tbody>
 </table>
+<h2 id="actual-usage">Actual Usage<a class="headerlink" href="#actual-usage" title="Permanent link">#</a></h2>
+<p>For the example of actual usage of this node, please refer to the <a href="../launch/preprocessor.launch.py">preprocessor.launch.py</a> file.</p>
+<h3 id="how-to-tuning-timeout_sec-and-input_offset">How to tuning timeout_sec and input_offset<a class="headerlink" href="#how-to-tuning-timeout_sec-and-input_offset" title="Permanent link">#</a></h3>
+<p>The values in <code>timeout_sec</code> and <code>input_offset</code> are used in the timercallback to control concatenation timings.</p>
+<ul>
+<li>Assumptions<ul>
+<li>when the timer runs out, we concatenate the pointclouds in the buffer</li>
+<li>when the first pointcloud comes to buffer, we reset the timer to <code>timeout_sec</code></li>
+<li>when the second and later pointclouds comes to buffer, we reset the timer to <code>timeout_sec</code> - <code>input_offset</code></li>
+<li>we assume all lidar has same frequency</li>
+</ul>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>How to tune</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>timeout_sec</code></td>
+<td>timeout sec for default timer</td>
+<td>To avoid mis-concatenation, at least this value must be shorter than sampling time.</td>
+</tr>
+<tr>
+<td><code>input_offset</code></td>
+<td>timeout extension when a pointcloud comes to buffer.</td>
+<td>The amount of waiting time will be <code>timeout_sec</code> - <code>input_offset</code>. So, you will need to set larger value for the last-coming pointcloud and smaller for fore-coming.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="node-separation-options-for-future">Node separation options for future<a class="headerlink" href="#node-separation-options-for-future" title="Permanent link">#</a></h3>
+<p>Since the pointcloud concatenation has two process, "time synchronization" and "pointcloud concatenation", it is possible to separate these processes.</p>
+<p>In the future, Nodes will be completely separated in order to achieve node loosely coupled nature, but currently both nodes can be selected for backward compatibility (<a href="https://github.com/autowarefoundation/autoware.universe/pull/3312">See this PR</a>).</p>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <p>It is necessary to assume that the vehicle odometry value exists, the sensor data and odometry timestamp are correct, and the TF from <code>base_link</code> to <code>sensor_frame</code> is also correct.</p></div>
 
