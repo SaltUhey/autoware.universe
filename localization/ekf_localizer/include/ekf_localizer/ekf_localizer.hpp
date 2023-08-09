@@ -272,6 +272,10 @@ private:
    */
   void updateSimple1DFilters(
     const geometry_msgs::msg::PoseWithCovarianceStamped & pose, const size_t smoothing_step);
+<<<<<<< HEAD
+=======
+
+>>>>>>> cdd5ec87c17e391fcf7a4fa1d9916159ab7fa50b
   /**
    * @brief initialize simple1DFilter
    */
