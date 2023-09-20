@@ -452,6 +452,8 @@ void EKFLocalizer::measurementUpdatePose(const geometry_msgs::msg::PoseWithCovar
   const double dz_delay = current_ekf_twist_.twist.linear.x * delay_time * std::sin(-rpy.y);
   geometry_msgs::msg::PoseWithCovarianceStamped pose_with_z_delay;
   pose_with_z_delay = pose;
+  // std::cout<<"rpy.y:"<<rpy.y<<std::endl;
+  // std::cout<<"dz_delay:"<<dz_delay<<std::endl;
   pose_with_z_delay.pose.pose.position.z += dz_delay;
 
   updateSimple1DFilters(pose_with_z_delay, params_.pose_smoothing_steps);

@@ -110,7 +110,7 @@ public:
   using PointCloud2 = sensor_msgs::msg::PointCloud2;
   using PointCloud2ConstPtr = sensor_msgs::msg::PointCloud2::ConstSharedPtr;
 
-  using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
+  using PointCloud = pcl::PointCloud<pcl::PointXYZRGB>; //chenged by SaltUhey 20230920
   using PointCloudPtr = PointCloud::Ptr;
   using PointCloudConstPtr = PointCloud::ConstPtr;
 
