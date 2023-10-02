@@ -208,7 +208,7 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
   else
   {
     // First pass: go over all points and insert them into the right leaf
-    for (const auto& point: *input_)
+    for (const auto& point: *input_)//20230920 このinputが全体なのか1leaf内なのか不明
     {
       if (!input_->is_dense)
         // Check if the point is invalid
@@ -230,6 +230,8 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
       }
 
       Eigen::Vector3d pt3d = point.getVector3fMap().template cast<double>(); //20230920 x,y,z
+
+
       // Accumulate point sum for centroid calculation
       leaf.mean_ += pt3d;
       // Accumulate x*xT for single pass covariance calculation
@@ -277,7 +279,7 @@ void pcl::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
   // Eigen values less than a threshold of max eigen value are inflated to a set fraction of the max eigen value.
   double min_covar_eigvalue;
 
-  for (auto it = leaves_.begin (); it != leaves_.end (); ++it)//この繰り返しを意識する必要あり
+  for (auto it = leaves_.begin (); it != leaves_.end (); ++it)//各ボクセルのloop
   {
 
     // Normalize the centroid

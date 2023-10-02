@@ -64,6 +64,7 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/crop_box_filter/crop_box_filter_nodelet.cpp
   src/downsample_filter/voxel_grid_downsample_filter_nodelet.cpp
   src/downsample_filter/voxel_grid_covariance_downsample_filter_nodelet.cpp
+  src/downsample_filter/voxel_grid_knn_dimension_downsample_filter_nodelet.cpp
   src/downsample_filter/random_downsample_filter_nodelet.cpp
   src/downsample_filter/approximate_downsample_filter_nodelet.cpp
   src/outlier_filter/ring_outlier_filter_nodelet.cpp
@@ -119,6 +120,11 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
 rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "pointcloud_preprocessor::VoxelGridCovarianceDownsampleFilterComponent"
   EXECUTABLE voxel_grid_covariance_downsample_filter_node)
+
+# -- Voxel Grid KNN Dimension Downsample Filter --
+rclcpp_components_register_node(pointcloud_preprocessor_filter
+  PLUGIN "pointcloud_preprocessor::VoxelGridKnnDimensionDownsampleFilterComponent"
+  EXECUTABLE voxel_grid_knn_dimension_downsample_filter_node)
 
 # -- Random Downsample Filter --
 rclcpp_components_register_node(pointcloud_preprocessor_filter
