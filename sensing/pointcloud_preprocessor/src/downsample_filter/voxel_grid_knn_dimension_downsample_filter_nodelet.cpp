@@ -32,35 +32,43 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
 {
   std::scoped_lock lock(mutex_);
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_input(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_output(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_input_ds_rep(new pcl::PointCloud<pcl::PointXYZ>); //代表点群, Rough
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_input_ds_ref(new pcl::PointCloud<pcl::PointXYZ>); //参照点群
   // pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_input_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
   // pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_output_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
   pcl::fromROSMsg(*input, *pcl_input);
-  //pcl_output->points.reserve(pcl_input->points.size());
-  pcl_output->points.reserve(pcl_input->points.size());
-  pcl::VoxelGrid<pcl::PointXYZ> filter;
-  filter.setInputCloud(pcl_input);
+  
+  pcl_input_ds_rep->points.reserve(pcl_input->points.size());
+  pcl::VoxelGrid<pcl::PointXYZ> filter_rough;
+  filter_rough.setInputCloud(pcl_input);
   // filter.setSaveLeafLayout(true);
-  filter.setLeafSize(voxel_size_x_, voxel_size_y_, voxel_size_z_);
-  filter.filter(*pcl_output);//細かめのダウンサンプリング後の点群：pcl_output
+  filter_rough.setLeafSize(voxel_size_x_, voxel_size_y_, voxel_size_z_);
+  filter_rough.filter(*pcl_input_ds_rep);//粗めのダウンサンプリング後の点群：代表点群
+
+  pcl_input_ds_ref->points.reserve(pcl_input->points.size());
+  pcl::VoxelGrid<pcl::PointXYZ> filter_detail;
+  filter_detail.setInputCloud(pcl_input);
+  // filter.setSaveLeafLayout(true);
+  filter_detail.setLeafSize(0.1, 0.1, 0.1);
+  filter_detail.filter(*pcl_input_ds_ref);//細かめのダウンサンプリング後の点群：参照点群
   
   //20231002
   pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-  kdtree.setInputCloud (pcl_input);
+  kdtree.setInputCloud (pcl_input_ds_ref);
   int K = 100; // K nearest neighbor search
   std::vector<int> pointIdxKNNSearch(K); //must be resized to k a priori
   std::vector<float> pointKNNSquaredDistance(K); //must be resized to k a priori
   
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr use_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);//そのうちRGBに戻す
   
-  for(size_t i= 0; i<pcl_output->size(); i++){
-    pcl::PointXYZ searchPoint = pcl_output->points[i];
+  for(size_t i= 0; i<pcl_input_ds_rep->size(); i++){
+    pcl::PointXYZ searchPoint = pcl_input_ds_rep->points[i];
     kdtree.nearestKSearch (searchPoint, K, pointIdxKNNSearch, pointKNNSquaredDistance);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_surr_1search (new pcl::PointCloud<pcl::PointXYZ>);
     //cloud_surr_1search->push_back(searchPoint);
     
     for (size_t j =0; j < pointIdxKNNSearch.size(); j++){
-      cloud_surr_1search->push_back(pcl_input->points[pointIdxKNNSearch[j]]);
+      cloud_surr_1search->push_back(pcl_input_ds_ref->points[pointIdxKNNSearch[j]]);
     }
     // std::cerr << "cloud_surr_1search size: " << cloud_surr_1search->size() << std::endl;
     //std::cerr << "check" << std::endl;
@@ -75,9 +83,9 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
     //HERE Comupute eigenvalue difference features
     double lam1,lam2,lam3;
     lam1 = eigen_values (0), lam2 = eigen_values (1), lam3 = eigen_values (2);
-    std::cerr << "lam1(eigen_values (0))" << lam1 << std::endl;
-    std::cerr << "lam2(eigen_values (1))" << lam2 << std::endl;
-    std::cerr << "lam3(eigen_values (2))" << lam3 << std::endl;
+    // std::cerr << "lam1(eigen_values (0))" << lam1 << std::endl;
+    // std::cerr << "lam2(eigen_values (1))" << lam2 << std::endl;
+    // std::cerr << "lam3(eigen_values (2))" << lam3 << std::endl;
     const double s1=lam1-lam2;
     const double s2=lam2-lam3;
     const double s3=lam3;
@@ -87,7 +95,7 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
     {
       if(evalue_diff_ftrs[i-1]<evalue_diff_ftrs[i]){d=i;}
     }
-    std::cerr << "dimension: " << d << std::endl;
+    //std::cerr << "dimension: " << d << std::endl;
     pcl::PointXYZRGB color_point;
     color_point.x = searchPoint.x;
     color_point.y = searchPoint.y;
