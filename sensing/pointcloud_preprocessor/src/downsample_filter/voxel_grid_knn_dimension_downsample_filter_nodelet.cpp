@@ -47,9 +47,9 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
   //20231002
   pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
   kdtree.setInputCloud (pcl_input);
-  int K = 5; // K nearest neighbor search
-  std::vector<int> pointIdxKNNSearch(K);
-  std::vector<float> pointKNNSquaredDistance(K);
+  int K = 100; // K nearest neighbor search
+  std::vector<int> pointIdxKNNSearch(K); //must be resized to k a priori
+  std::vector<float> pointKNNSquaredDistance(K); //must be resized to k a priori
   
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr use_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);//そのうちRGBに戻す
   
@@ -59,7 +59,7 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_surr_1search (new pcl::PointCloud<pcl::PointXYZ>);
     //cloud_surr_1search->push_back(searchPoint);
     
-    for (size_t j =0; j<pointIdxKNNSearch.size(); j++){
+    for (size_t j =0; j < pointIdxKNNSearch.size(); j++){
       cloud_surr_1search->push_back(pcl_input->points[pointIdxKNNSearch[j]]);
     }
     // std::cerr << "cloud_surr_1search size: " << cloud_surr_1search->size() << std::endl;
@@ -73,25 +73,56 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
     Eigen::Vector3f& eigen_values = pca.getEigenValues();
 
     //HERE Comupute eigenvalue difference features
-    double lam1,lam2,lam3,s1,s2,s3;
+    double lam1,lam2,lam3;
     lam1 = eigen_values (0), lam2 = eigen_values (1), lam3 = eigen_values (2);
-    s1=lam1-lam2,s2=lam2-lam3,s3=lam3;
-    double evalue_diff_ftrs[4]={0,s1,s2,s3};
+    std::cerr << "lam1(eigen_values (0))" << lam1 << std::endl;
+    std::cerr << "lam2(eigen_values (1))" << lam2 << std::endl;
+    std::cerr << "lam3(eigen_values (2))" << lam3 << std::endl;
+    const double s1=lam1-lam2;
+    const double s2=lam2-lam3;
+    const double s3=lam3;
+    const double evalue_diff_ftrs[4]={0,s1,s2,s3};
     int d=0;
     for(int i=1;i<=3;i++)
     {
       if(evalue_diff_ftrs[i-1]<evalue_diff_ftrs[i]){d=i;}
     }
     std::cerr << "dimension: " << d << std::endl;
-    if (d==1 || d==2 || d==3){
-      pcl::PointXYZRGB color_point;
-      color_point.x = searchPoint.x;
-      color_point.y = searchPoint.y;
-      color_point.z = searchPoint.z;
-      color_point.r = 255;
-      color_point.g = 0;
-      color_point.b = 0;
+    pcl::PointXYZRGB color_point;
+    color_point.x = searchPoint.x;
+    color_point.y = searchPoint.y;
+    color_point.z = searchPoint.z;
+    color_point.r = 255;
+    color_point.g = 255;
+    color_point.b = 255;
 
+    if (d==1){
+      use_cloud->push_back(color_point);
+      for (size_t i = 0; i<cloud_surr_1search->size();i++){
+        pcl::PointXYZRGB point;
+        point.x = cloud_surr_1search->points[i].x;
+        point.y = cloud_surr_1search->points[i].y;
+        point.z = cloud_surr_1search->points[i].z;
+        point.r = 255;
+        point.g = 0;
+        point.b = 0;
+        use_cloud->push_back(point);
+      }
+    }
+    else if (d==2){
+      use_cloud->push_back(color_point);
+      for (size_t i = 0; i<cloud_surr_1search->size();i++){
+        pcl::PointXYZRGB point;
+        point.x = cloud_surr_1search->points[i].x;
+        point.y = cloud_surr_1search->points[i].y;
+        point.z = cloud_surr_1search->points[i].z;
+        point.r = 0;
+        point.g = 100;
+        point.b = 255;
+        use_cloud->push_back(point);
+      }
+    }    
+    else if (d==3){
       use_cloud->push_back(color_point);
       for (size_t i = 0; i<cloud_surr_1search->size();i++){
         pcl::PointXYZRGB point;
@@ -103,8 +134,7 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
         point.b = 0;
         use_cloud->push_back(point);
       }
-    }
-
+    }    
   }
   
   pcl::toROSMsg(*use_cloud, output);
