@@ -8,6 +8,7 @@
 
 #include <pcl/common/pca.h>
 #include <pcl/features/feature.h>
+#include <time.h>
 
 namespace pointcloud_preprocessor
 {
@@ -30,9 +31,11 @@ VoxelGridKnnDimensionDownsampleFilterComponent::VoxelGridKnnDimensionDownsampleF
 void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
   const PointCloud2ConstPtr & input, const IndicesPtr & /*indices*/, PointCloud2 & output)
 {
+  clock_t start = clock();
+
   std::scoped_lock lock(mutex_);
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_input(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_input_ds_rep(new pcl::PointCloud<pcl::PointXYZ>); //代表点群, Rough
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_input_ds_rep(new pcl::PointCloud<pcl::PointXYZ>); //代表点群
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_input_ds_ref(new pcl::PointCloud<pcl::PointXYZ>); //参照点群
   // pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_input_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
   // pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_output_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -49,13 +52,13 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
   pcl::VoxelGrid<pcl::PointXYZ> filter_detail;
   filter_detail.setInputCloud(pcl_input);
   // filter.setSaveLeafLayout(true);
-  filter_detail.setLeafSize(0.1, 0.1, 0.1);
+  filter_detail.setLeafSize(0.3, 0.3, 0.3);
   filter_detail.filter(*pcl_input_ds_ref);//細かめのダウンサンプリング後の点群：参照点群
   
   //20231002
   pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
   kdtree.setInputCloud (pcl_input_ds_ref);
-  int K = 100; // K nearest neighbor search
+  int K = 50; // K nearest neighbor search
   std::vector<int> pointIdxKNNSearch(K); //must be resized to k a priori
   std::vector<float> pointKNNSquaredDistance(K); //must be resized to k a priori
   
@@ -68,85 +71,130 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
     //cloud_surr_1search->push_back(searchPoint);
     
     for (size_t j =0; j < pointIdxKNNSearch.size(); j++){
+      if(pointKNNSquaredDistance[i]<5.0){
       cloud_surr_1search->push_back(pcl_input_ds_ref->points[pointIdxKNNSearch[j]]);
+      }
     }
     // std::cerr << "cloud_surr_1search size: " << cloud_surr_1search->size() << std::endl;
     //std::cerr << "check" << std::endl;
 
-    //judge cloud_surr_1search(point cloud) feature
-    pcl::PCA<pcl::PointXYZ> pca;
-    // pcl::PointIndices::Ptr pca_indices(new pcl::PointIndices());
-    pca.setInputCloud(cloud_surr_1search);
-    //pca.setIndices(pointIdxKNNSearch);//よくわからない
-    Eigen::Vector3f& eigen_values = pca.getEigenValues();
+    if(cloud_surr_1search->size()>=5){
+      //judge cloud_surr_1search(point cloud) feature
+      pcl::PCA<pcl::PointXYZ> pca;
+      // pcl::PointIndices::Ptr pca_indices(new pcl::PointIndices());
+      pca.setInputCloud(cloud_surr_1search);
+      //pca.setIndices(pointIdxKNNSearch);//よくわからない
+      Eigen::Vector3f& eigen_values = pca.getEigenValues();
+      
+      //HERE Comupute eigenvalue difference features
+      double lam1,lam2,lam3;
+      lam1 = eigen_values (0), lam2 = eigen_values (1), lam3 = eigen_values (2);
+      // std::cerr << "lam1(eigen_values (0))" << lam1 << std::endl;
+      // std::cerr << "lam2(eigen_values (1))" << lam2 << std::endl;
+      // std::cerr << "lam3(eigen_values (2))" << lam3 << std::endl;
+      const double s1=std::abs(lam1-lam2);
+      const double s2=std::abs(lam2-lam3);
+      const double s3=std::abs(lam3);
+      const double evalue_diff_ftrs[4]={0,s1,s2,s3};
+      int d=0;
+      for(int i=1;i<=3;i++)
+      {
+        if(evalue_diff_ftrs[i-1]<evalue_diff_ftrs[i]){d=i;}
+      }
+      //std::cerr << "dimension: " << d << std::endl;
 
-    //HERE Comupute eigenvalue difference features
-    double lam1,lam2,lam3;
-    lam1 = eigen_values (0), lam2 = eigen_values (1), lam3 = eigen_values (2);
-    // std::cerr << "lam1(eigen_values (0))" << lam1 << std::endl;
-    // std::cerr << "lam2(eigen_values (1))" << lam2 << std::endl;
-    // std::cerr << "lam3(eigen_values (2))" << lam3 << std::endl;
-    const double s1=lam1-lam2;
-    const double s2=lam2-lam3;
-    const double s3=lam3;
-    const double evalue_diff_ftrs[4]={0,s1,s2,s3};
-    int d=0;
-    for(int i=1;i<=3;i++)
-    {
-      if(evalue_diff_ftrs[i-1]<evalue_diff_ftrs[i]){d=i;}
-    }
-    //std::cerr << "dimension: " << d << std::endl;
-    pcl::PointXYZRGB color_point;
-    color_point.x = searchPoint.x;
-    color_point.y = searchPoint.y;
-    color_point.z = searchPoint.z;
-    color_point.r = 255;
-    color_point.g = 255;
-    color_point.b = 255;
+      // if (d==1 || d==2){
+      //   pcl::PointXYZRGB color_point;
+      //   color_point.x = searchPoint.x;
+      //   color_point.y = searchPoint.y;
+      //   color_point.z = searchPoint.z;
+      //   color_point.r = 255;
+      //   color_point.g = 255;
+      //   color_point.b = 255;
+      //   use_cloud->push_back(color_point);
+      // }
 
-    if (d==1){
+      // Visualize
+      pcl::PointXYZRGB color_point;
+      color_point.x = searchPoint.x;
+      color_point.y = searchPoint.y;
+      color_point.z = searchPoint.z;
+      color_point.r = 255;
+      color_point.g = 255;
+      color_point.b = 255;
       use_cloud->push_back(color_point);
-      for (size_t i = 0; i<cloud_surr_1search->size();i++){
-        pcl::PointXYZRGB point;
-        point.x = cloud_surr_1search->points[i].x;
-        point.y = cloud_surr_1search->points[i].y;
-        point.z = cloud_surr_1search->points[i].z;
-        point.r = 255;
-        point.g = 0;
-        point.b = 0;
-        use_cloud->push_back(point);
+      if (d==1){
+        Eigen::Matrix3f& eigen_vectors = pca.getEigenVectors();//d=1のときのみでよいかも
+        //std::cerr << "Eigenvectors:\n" << eigenvectors << std::endl;
+        const Eigen::Vector3f eigenvector_x= eigen_vectors.col(0); //x軸に対応？
+        const Eigen::Vector3f x_axis(1, 0, 0);
+        float angle_X_rad = std::acos(eigenvector_x.dot(x_axis));
+        float angle_X_deg = angle_X_rad*(180.0/M_PI);
+        //std::cerr << "angle_X [rad]" << angle_X_rad << std::endl;
+
+        if ((angle_X_deg < 5) || ((175<angle_X_rad)&&(angle_X_rad<185))){
+          for (size_t i = 0; i<cloud_surr_1search->size();i++){
+            pcl::PointXYZRGB point;
+            point.x = cloud_surr_1search->points[i].x;
+            point.y = cloud_surr_1search->points[i].y;
+            point.z = cloud_surr_1search->points[i].z;
+            point.r = 255;
+            point.g = 241;
+            point.b = 0;
+            use_cloud->push_back(point);
+          }
+        }
+        else{
+          for (size_t i = 0; i<cloud_surr_1search->size();i++){
+            pcl::PointXYZRGB point;
+            point.x = cloud_surr_1search->points[i].x;
+            point.y = cloud_surr_1search->points[i].y;
+            point.z = cloud_surr_1search->points[i].z;
+            point.r = 255;
+            point.g = 0;
+            point.b = 0;
+            use_cloud->push_back(point);
+          }
+        }
+
+      }
+      else if (d==2){
+        
+        for (size_t i = 0; i<cloud_surr_1search->size();i++){
+          pcl::PointXYZRGB point;
+          point.x = cloud_surr_1search->points[i].x;
+          point.y = cloud_surr_1search->points[i].y;
+          point.z = cloud_surr_1search->points[i].z;
+          point.r = 0;
+          point.g = 100;
+          point.b = 255;
+          use_cloud->push_back(point);
+        }
+      }    
+      else if (d==3){
+        
+        for (size_t i = 0; i<cloud_surr_1search->size();i++){
+          pcl::PointXYZRGB point;
+          point.x = cloud_surr_1search->points[i].x;
+          point.y = cloud_surr_1search->points[i].y;
+          point.z = cloud_surr_1search->points[i].z;
+          point.r = 0;
+          point.g = 255;
+          point.b = 0;
+          use_cloud->push_back(point);
+        }
       }
     }
-    else if (d==2){
-      use_cloud->push_back(color_point);
-      for (size_t i = 0; i<cloud_surr_1search->size();i++){
-        pcl::PointXYZRGB point;
-        point.x = cloud_surr_1search->points[i].x;
-        point.y = cloud_surr_1search->points[i].y;
-        point.z = cloud_surr_1search->points[i].z;
-        point.r = 0;
-        point.g = 100;
-        point.b = 255;
-        use_cloud->push_back(point);
-      }
-    }    
-    else if (d==3){
-      use_cloud->push_back(color_point);
-      for (size_t i = 0; i<cloud_surr_1search->size();i++){
-        pcl::PointXYZRGB point;
-        point.x = cloud_surr_1search->points[i].x;
-        point.y = cloud_surr_1search->points[i].y;
-        point.z = cloud_surr_1search->points[i].z;
-        point.r = 0;
-        point.g = 255;
-        point.b = 0;
-        use_cloud->push_back(point);
-      }
-    }    
+
   }
   
   pcl::toROSMsg(*use_cloud, output);
   output.header = input->header;
+
+  clock_t end = clock();
+  const double time = static_cast<double>(end - start) / CLOCKS_PER_SEC * 1000.0;
+  printf("time %lf[ms]\n", time);
+
 }
 
 rcl_interfaces::msg::SetParametersResult VoxelGridKnnDimensionDownsampleFilterComponent::paramCallback(
