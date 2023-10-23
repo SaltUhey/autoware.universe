@@ -8,6 +8,9 @@
 
 #include <pcl/common/pca.h>
 #include <pcl/features/feature.h>
+#include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/segmentation/extract_clusters.h>
+#include <pcl/filters/extract_indices.h>
 #include <time.h>
 
 namespace pointcloud_preprocessor
@@ -52,7 +55,8 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
   pcl::VoxelGrid<pcl::PointXYZ> filter_detail;
   filter_detail.setInputCloud(pcl_input);
   // filter.setSaveLeafLayout(true);
-  filter_detail.setLeafSize(0.3, 0.3, 0.3);
+  const float ref_voxel_size = 0.3;
+  filter_detail.setLeafSize(ref_voxel_size, ref_voxel_size, ref_voxel_size);
   filter_detail.filter(*pcl_input_ds_ref);//細かめのダウンサンプリング後の点群：参照点群
   
   //20231002
@@ -62,7 +66,8 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
   std::vector<int> pointIdxKNNSearch(K); //must be resized to k a priori
   std::vector<float> pointKNNSquaredDistance(K); //must be resized to k a priori
   
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr use_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);//そのうちRGBに戻す
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr use_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_visualized (new pcl::PointCloud<pcl::PointXYZRGB>);
   
   for(size_t i= 0; i<pcl_input_ds_rep->size(); i++){
     pcl::PointXYZ searchPoint = pcl_input_ds_rep->points[i];
@@ -78,7 +83,47 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
     // std::cerr << "cloud_surr_1search size: " << cloud_surr_1search->size() << std::endl;
     //std::cerr << "check" << std::endl;
     
-    if(cloud_surr_1search->size()>=5){
+
+    //cloud_surr_1searchの調整----------------------------------------
+
+    //Removing noise
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+    sor.setInputCloud (cloud_surr_1search);
+    sor.setMeanK (K/2);//The number of points to use for mean distance estimation
+    sor.setStddevMulThresh (ref_voxel_size); //Standard deviations threshold
+    sor.filter (*cloud_surr_1search);
+
+    //Clustering
+    // const double cluster_tolerance = ref_voxel_size; 
+    // const int min_cluster_size = 5;
+    // pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+    // tree->setInputCloud(cloud_surr_1search);
+    // std::vector<pcl::PointIndices> cluster_indices; //クラスタリング後のインデックスが格納されるベクトル
+    // cluster_indices.clear();
+    // pcl::EuclideanClusterExtraction<pcl::PointXYZ> ece;
+    // ece.setClusterTolerance(cluster_tolerance);
+    // ece.setMinClusterSize(min_cluster_size);
+    // /*各クラスタのメンバの最大数を設定*/
+    // ece.setMaxClusterSize(cloud_surr_1search->points.size());
+    // ece.setSearchMethod(tree);
+    // ece.setInputCloud(cloud_surr_1search);
+    // /*クラスリング実行*/
+    // pcl::ExtractIndices<pcl::PointXYZ> ei;
+    // ei.setInputCloud(cloud_surr_1search);
+    // ei.setNegative(false);
+    // ece.extract(cluster_indices);
+    // pcl::PointIndices::Ptr tmp_clustered_indices (new pcl::PointIndices);
+    // if(cluster_indices.size()>=1){
+    //   *tmp_clustered_indices = cluster_indices[0];
+    //   ei.setIndices(tmp_clustered_indices);
+    //   ei.filter(*cloud_surr_1search);
+    // }
+    
+    //std::cerr << "cloud_surr_1search size" << cloud_surr_1search->size() << std::endl;
+    //-------------------------------------------------------------
+
+    const int judge_num = 10;
+    if(cloud_surr_1search->size()>=judge_num){
       //judge cloud_surr_1search(point cloud) feature
       pcl::PCA<pcl::PointXYZ> pca;
       // pcl::PointIndices::Ptr pca_indices(new pcl::PointIndices());
@@ -103,17 +148,6 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
       }
       //std::cerr << "dimension: " << d << std::endl;
 
-      // if (d==1 || d==2){
-      //   pcl::PointXYZRGB color_point;
-      //   color_point.x = searchPoint.x;
-      //   color_point.y = searchPoint.y;
-      //   color_point.z = searchPoint.z;
-      //   color_point.r = 255;
-      //   color_point.g = 255;
-      //   color_point.b = 255;
-      //   use_cloud->push_back(color_point);
-      // }
-
       // Visualize
       pcl::PointXYZRGB color_point;
       color_point.x = searchPoint.x;
@@ -122,7 +156,8 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
       color_point.r = 255;
       color_point.g = 255;
       color_point.b = 255;
-      use_cloud->push_back(color_point);
+      cloud_visualized->push_back(color_point);
+
       if (d==1){
         Eigen::Matrix3f& eigen_vectors = pca.getEigenVectors();//d=1のときのみでよいかも
         //std::cerr << "Eigenvectors:\n" << eigenvectors << std::endl;
@@ -142,19 +177,30 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
             point.r = 255;
             point.g = 241;
             point.b = 0;
+            //cloud_visualized->push_back(point);
             use_cloud->push_back(point);
           }
         }
         else{
           for (size_t i = 0; i<cloud_surr_1search->size();i++){
+            // pcl::PointXYZRGB point;
+            // point.x = cloud_surr_1search->points[i].x;
+            // point.y = cloud_surr_1search->points[i].y;
+            // point.z = cloud_surr_1search->points[i].z;
+            // point.r = 255;
+            // point.g = 0;
+            // point.b = 0;
+            // cloud_visualized->push_back(point);
+            
             pcl::PointXYZRGB point;
-            point.x = cloud_surr_1search->points[i].x;
-            point.y = cloud_surr_1search->points[i].y;
-            point.z = cloud_surr_1search->points[i].z;
+            point.x = searchPoint.x;
+            point.y = searchPoint.y;
+            point.z = searchPoint.z;
             point.r = 255;
             point.g = 0;
             point.b = 0;
             use_cloud->push_back(point);
+            
           }
         }
 
@@ -162,10 +208,19 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
       else if (d==2){
         
         for (size_t i = 0; i<cloud_surr_1search->size();i++){
+          // pcl::PointXYZRGB point;
+          // point.x = cloud_surr_1search->points[i].x;
+          // point.y = cloud_surr_1search->points[i].y;
+          // point.z = cloud_surr_1search->points[i].z;
+          // point.r = 0;
+          // point.g = 100;
+          // point.b = 255;
+          // cloud_visualized->push_back(point);
+
           pcl::PointXYZRGB point;
-          point.x = cloud_surr_1search->points[i].x;
-          point.y = cloud_surr_1search->points[i].y;
-          point.z = cloud_surr_1search->points[i].z;
+          point.x = searchPoint.x;
+          point.y = searchPoint.y;
+          point.z = searchPoint.z;
           point.r = 0;
           point.g = 100;
           point.b = 255;
@@ -174,21 +229,22 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
       }    
       else if (d==3){
         
-        for (size_t i = 0; i<cloud_surr_1search->size();i++){
-          pcl::PointXYZRGB point;
-          point.x = cloud_surr_1search->points[i].x;
-          point.y = cloud_surr_1search->points[i].y;
-          point.z = cloud_surr_1search->points[i].z;
-          point.r = 0;
-          point.g = 255;
-          point.b = 0;
-          use_cloud->push_back(point);
-        }
+        // for (size_t i = 0; i<cloud_surr_1search->size();i++){
+        //   pcl::PointXYZRGB point;
+        //   point.x = cloud_surr_1search->points[i].x;
+        //   point.y = cloud_surr_1search->points[i].y;
+        //   point.z = cloud_surr_1search->points[i].z;
+        //   point.r = 0;
+        //   point.g = 255;
+        //   point.b = 0;
+        //   cloud_visualized->push_back(point);
+        // }
       }
     }
 
   }
   
+  //pcl::toROSMsg(*cloud_visualized, output);
   pcl::toROSMsg(*use_cloud, output);
   output.header = input->header;
 
