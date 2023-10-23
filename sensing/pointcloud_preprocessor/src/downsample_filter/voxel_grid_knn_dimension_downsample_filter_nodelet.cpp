@@ -167,8 +167,7 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
         float angle_Z_deg = angle_Z_rad*(180.0/M_PI);
         //std::cerr << "angle_X [rad]" << angle_X_rad << std::endl;
 
-        if ((angle_Z_deg < 10) || ((170<angle_Z_deg)&&(angle_Z_deg<190))){
-        //if ((85<angle_X_deg)&&(angle_X_deg<95)){
+        if (((angle_Z_deg < 10) || ((170<angle_Z_deg)&&(angle_Z_deg<190))) && sqrt(lam2)<=0.35){
           for (size_t i = 0; i<cloud_surr_1search->size();i++){
             pcl::PointXYZRGB point;
             point.x = cloud_surr_1search->points[i].x;
