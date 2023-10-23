@@ -77,7 +77,7 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
     }
     // std::cerr << "cloud_surr_1search size: " << cloud_surr_1search->size() << std::endl;
     //std::cerr << "check" << std::endl;
-
+    
     if(cloud_surr_1search->size()>=5){
       //judge cloud_surr_1search(point cloud) feature
       pcl::PCA<pcl::PointXYZ> pca;
@@ -126,13 +126,14 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
       if (d==1){
         Eigen::Matrix3f& eigen_vectors = pca.getEigenVectors();//d=1のときのみでよいかも
         //std::cerr << "Eigenvectors:\n" << eigenvectors << std::endl;
-        const Eigen::Vector3f eigenvector_x= eigen_vectors.col(0); //x軸に対応？
-        const Eigen::Vector3f x_axis(1, 0, 0);
-        float angle_X_rad = std::acos(eigenvector_x.dot(x_axis));
-        float angle_X_deg = angle_X_rad*(180.0/M_PI);
+        const Eigen::Vector3f eigenvector_1= eigen_vectors.col(0); //first eigen vector
+        const Eigen::Vector3f z_axis(0, 0, 1);
+        float angle_Z_rad = std::acos(eigenvector_1.dot(z_axis));
+        float angle_Z_deg = angle_Z_rad*(180.0/M_PI);
         //std::cerr << "angle_X [rad]" << angle_X_rad << std::endl;
 
-        if ((angle_X_deg < 5) || ((175<angle_X_rad)&&(angle_X_rad<185))){
+        if ((angle_Z_deg < 10) || ((170<angle_Z_deg)&&(angle_Z_deg<190))){
+        //if ((85<angle_X_deg)&&(angle_X_deg<95)){
           for (size_t i = 0; i<cloud_surr_1search->size();i++){
             pcl::PointXYZRGB point;
             point.x = cloud_surr_1search->points[i].x;
