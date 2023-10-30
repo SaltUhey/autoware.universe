@@ -15,6 +15,7 @@
 #include <pcl/filters/extract_indices.h>
 #include <pcl/common/common_headers.h>
 #include <pcl/features/normal_3d.h>
+#include <pcl/filters/random_sample.h>
 
 #include <time.h>
 
@@ -165,14 +166,14 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
 
       if (d==1){
         Eigen::Matrix3f& eigen_vectors = pca.getEigenVectors();
-        //std::cerr << "Eigenvectors:\n" << eigenvectors << std::endl;
         const Eigen::Vector3f eigenvector_1= eigen_vectors.col(0); //first eigen vector
+        //std::cerr << "eigenvector_1:\n" << eigenvector_1 << std::endl;
         const Eigen::Vector3f z_axis(0, 0, 1);
         float angle_Z_rad = std::acos(eigenvector_1.dot(z_axis));
         float angle_Z_deg = angle_Z_rad*(180.0/M_PI);
         //std::cerr << "angle_Z_deg" << angle_Z_deg << "[degree]" <<std::endl;
 
-        if (((angle_Z_deg < 10) || (170 < angle_Z_deg) ) && sqrt(lam2)<=0.35){
+        if ((angle_Z_deg < 10) || (170 < angle_Z_deg) ) {
           for (size_t i = 0; i<cloud_surr_1search->size();i++){
             pcl::PointXYZRGB point;
             point.x = cloud_surr_1search->points[i].x;
@@ -223,67 +224,81 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
         //} 
 
         //considering normal direction
-        Eigen::Vector4f d2_centroid;
-        pcl::compute3DCentroid(*cloud_surr_1search, d2_centroid);
-        Eigen::Matrix3f covariance_matrix;
-        //Eigen::Matrix< float, 4, 1 >  d2_centroid_mat;
-        //d2_centroid_mat << d2_centroid[0], d2_centroid[1], d2_centroid[2], d2_centroid[3];
-        pcl::computeCovarianceMatrix(*cloud_surr_1search, covariance_matrix);
-        Eigen::Vector4f plane_parameters;
-        float curvature;
-        pcl::solvePlaneParameters(covariance_matrix,d2_centroid,plane_parameters,curvature);
-        const Eigen::Vector3f normal_axis(plane_parameters[0], plane_parameters[1], plane_parameters[2]);
+        // Eigen::Vector4f d2_centroid;
+        // pcl::compute3DCentroid(*cloud_surr_1search, d2_centroid);
+        // Eigen::Matrix3f covariance_matrix;
+        // pcl::computeCovarianceMatrix(*cloud_surr_1search, covariance_matrix);
+        // Eigen::Vector4f plane_parameters;
+        // float curvature;
+        // pcl::solvePlaneParameters(covariance_matrix,d2_centroid,plane_parameters,curvature);
+        // const Eigen::Vector3f normal_axis(plane_parameters[0], plane_parameters[1], plane_parameters[2]);
+
+        Eigen::Matrix3f& eigen_vectors = pca.getEigenVectors();
+        const Eigen::Vector3f eigenvector_3= eigen_vectors.col(2); //third eigen vector
+
         const Eigen::Vector3f z_axis(0, 0, 1);      
-        float angle_N_rad = std::acos(normal_axis.dot(z_axis));
+        float angle_N_rad = std::acos(eigenvector_3.dot(z_axis));//normal_axis
         float angle_N_deg = angle_N_rad*(180.0/M_PI);
         if ((angle_N_deg < 10) || (170 < angle_N_deg)){
-          pcl::PointXYZRGB point_ground;
-          point_ground.x = searchPoint.x;
-          point_ground.y = searchPoint.y;
-          point_ground.z = searchPoint.z;
-          point_ground.r = 0;
-          point_ground.g = 100;
-          point_ground.b = 255;
-          use_cloud->push_back(point_ground);
+          int skip = 10;
+          for (size_t i = 0; i<cloud_surr_1search->size();i+=skip){
+            pcl::PointXYZRGB point_ground;
+            point_ground.x = cloud_surr_1search->points[i].x;
+            point_ground.y = cloud_surr_1search->points[i].y;
+            point_ground.z = cloud_surr_1search->points[i].z;
+            point_ground.r = 207;
+            point_ground.g = 249;
+            point_ground.b = 255;
+            use_cloud->push_back(point_ground);
+          }
         }
         else{     
-          pcl::PointXYZRGB point_wall;
-          point_wall.x = searchPoint.x;
-          point_wall.y = searchPoint.y;
-          point_wall.z = searchPoint.z;
-          point_wall.r = 207;
-          point_wall.g = 249;
-          point_wall.b = 255;
-          use_cloud->push_back(point_wall);
+          for (size_t i = 0; i<cloud_surr_1search->size();i++){
+            pcl::PointXYZRGB point_wall;
+            point_wall.x = cloud_surr_1search->points[i].x;
+            point_wall.y = cloud_surr_1search->points[i].y;
+            point_wall.z = cloud_surr_1search->points[i].z;
+            point_wall.r = 207;
+            point_wall.g = 249;
+            point_wall.b = 255;
+            use_cloud->push_back(point_wall);
+          }
         }
       }    
-      else if (d==3){
+      // else if (d==3){
         
-        // for (size_t i = 0; i<cloud_surr_1search->size();i++){
-        //   pcl::PointXYZRGB point;
-        //   point.x = cloud_surr_1search->points[i].x;
-        //   point.y = cloud_surr_1search->points[i].y;
-        //   point.z = cloud_surr_1search->points[i].z;
-        //   point.r = 0;
-        //   point.g = 255;
-        //   point.b = 0;
-        //   cloud_visualized->push_back(point);
-        // }
+      //   // for (size_t i = 0; i<cloud_surr_1search->size();i++){
+      //   //   pcl::PointXYZRGB point;
+      //   //   point.x = cloud_surr_1search->points[i].x;
+      //   //   point.y = cloud_surr_1search->points[i].y;
+      //   //   point.z = cloud_surr_1search->points[i].z;
+      //   //   point.r = 0;
+      //   //   point.g = 255;
+      //   //   point.b = 0;
+      //   //   cloud_visualized->push_back(point);
+      //   // }
 
-         pcl::PointXYZRGB point;
-            point.x = searchPoint.x;
-            point.y = searchPoint.y;
-            point.z = searchPoint.z;
-            point.r = 0;
-            point.g = 255;
-            point.b = 0;
-            use_cloud->push_back(point);
+      //   pcl::PointXYZRGB point;
+      //   point.x = searchPoint.x;
+      //   point.y = searchPoint.y;
+      //   point.z = searchPoint.z;
+      //   point.r = 0;
+      //   point.g = 255;
+      //   point.b = 0;
+      //   use_cloud->push_back(point);
+      // }
+
+
       }
-    }
 
   }
   
   //pcl::toROSMsg(*cloud_visualized, output);
+  pcl::RandomSample <pcl::PointXYZRGB> random;
+  random.setInputCloud(use_cloud);
+  random.setSeed (std::rand ());
+  random.setSample((unsigned int)(1500));
+  random.filter(*use_cloud);
   pcl::toROSMsg(*use_cloud, output);
   output.header = input->header;
 
