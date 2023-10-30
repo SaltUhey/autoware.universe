@@ -241,7 +241,7 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
         float angle_N_deg = angle_N_rad*(180.0/M_PI);
         if ((angle_N_deg < 10) || (170 < angle_N_deg)){
           int skip = 10;
-          for (size_t i = 0; i<cloud_surr_1search->size();i+=yskip){
+          for (size_t i = 0; i<cloud_surr_1search->size();i+=skip){
             pcl::PointXYZRGB point_ground;
             point_ground.x = cloud_surr_1search->points[i].x;
             point_ground.y = cloud_surr_1search->points[i].y;
