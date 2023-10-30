@@ -6,11 +6,16 @@
 
 #include <vector>
 
+
+#include <pcl/common/impl/centroid.hpp>
 #include <pcl/common/pca.h>
 #include <pcl/features/feature.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/common/common_headers.h>
+#include <pcl/features/normal_3d.h>
+
 #include <time.h>
 
 namespace pointcloud_preprocessor
@@ -159,15 +164,15 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
       cloud_visualized->push_back(color_point);
 
       if (d==1){
-        Eigen::Matrix3f& eigen_vectors = pca.getEigenVectors();//d=1のときのみでよいかも
+        Eigen::Matrix3f& eigen_vectors = pca.getEigenVectors();
         //std::cerr << "Eigenvectors:\n" << eigenvectors << std::endl;
         const Eigen::Vector3f eigenvector_1= eigen_vectors.col(0); //first eigen vector
         const Eigen::Vector3f z_axis(0, 0, 1);
         float angle_Z_rad = std::acos(eigenvector_1.dot(z_axis));
         float angle_Z_deg = angle_Z_rad*(180.0/M_PI);
-        //std::cerr << "angle_X [rad]" << angle_X_rad << std::endl;
+        //std::cerr << "angle_Z_deg" << angle_Z_deg << "[degree]" <<std::endl;
 
-        if (((angle_Z_deg < 10) || ((170<angle_Z_deg)&&(angle_Z_deg<190))) && sqrt(lam2)<=0.35){
+        if (((angle_Z_deg < 10) || (170 < angle_Z_deg) ) && sqrt(lam2)<=0.35){
           for (size_t i = 0; i<cloud_surr_1search->size();i++){
             pcl::PointXYZRGB point;
             point.x = cloud_surr_1search->points[i].x;
@@ -181,7 +186,7 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
           }
         }
         else{
-          for (size_t i = 0; i<cloud_surr_1search->size();i++){
+          //for (size_t i = 0; i<cloud_surr_1search->size();i++){
             // pcl::PointXYZRGB point;
             // point.x = cloud_surr_1search->points[i].x;
             // point.y = cloud_surr_1search->points[i].y;
@@ -200,13 +205,13 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
             point.b = 0;
             use_cloud->push_back(point);
             
-          }
+          //}
         }
 
       }
       else if (d==2){
         
-        for (size_t i = 0; i<cloud_surr_1search->size();i++){
+        //for (size_t i = 0; i<cloud_surr_1search->size();i++){
           // pcl::PointXYZRGB point;
           // point.x = cloud_surr_1search->points[i].x;
           // point.y = cloud_surr_1search->points[i].y;
@@ -215,15 +220,41 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
           // point.g = 100;
           // point.b = 255;
           // cloud_visualized->push_back(point);
+        //} 
 
-          pcl::PointXYZRGB point;
-          point.x = searchPoint.x;
-          point.y = searchPoint.y;
-          point.z = searchPoint.z;
-          point.r = 0;
-          point.g = 100;
-          point.b = 255;
-          use_cloud->push_back(point);
+        //considering normal direction
+        Eigen::Vector4f d2_centroid;
+        pcl::compute3DCentroid(*cloud_surr_1search, d2_centroid);
+        Eigen::Matrix3f covariance_matrix;
+        //Eigen::Matrix< float, 4, 1 >  d2_centroid_mat;
+        //d2_centroid_mat << d2_centroid[0], d2_centroid[1], d2_centroid[2], d2_centroid[3];
+        pcl::computeCovarianceMatrix(*cloud_surr_1search, covariance_matrix);
+        Eigen::Vector4f plane_parameters;
+        float curvature;
+        pcl::solvePlaneParameters(covariance_matrix,d2_centroid,plane_parameters,curvature);
+        const Eigen::Vector3f normal_axis(plane_parameters[0], plane_parameters[1], plane_parameters[2]);
+        const Eigen::Vector3f z_axis(0, 0, 1);      
+        float angle_N_rad = std::acos(normal_axis.dot(z_axis));
+        float angle_N_deg = angle_N_rad*(180.0/M_PI);
+        if ((angle_N_deg < 10) || (170 < angle_N_deg)){
+          pcl::PointXYZRGB point_ground;
+          point_ground.x = searchPoint.x;
+          point_ground.y = searchPoint.y;
+          point_ground.z = searchPoint.z;
+          point_ground.r = 0;
+          point_ground.g = 100;
+          point_ground.b = 255;
+          use_cloud->push_back(point_ground);
+        }
+        else{     
+          pcl::PointXYZRGB point_wall;
+          point_wall.x = searchPoint.x;
+          point_wall.y = searchPoint.y;
+          point_wall.z = searchPoint.z;
+          point_wall.r = 207;
+          point_wall.g = 249;
+          point_wall.b = 255;
+          use_cloud->push_back(point_wall);
         }
       }    
       else if (d==3){
@@ -238,6 +269,15 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
         //   point.b = 0;
         //   cloud_visualized->push_back(point);
         // }
+
+         pcl::PointXYZRGB point;
+            point.x = searchPoint.x;
+            point.y = searchPoint.y;
+            point.z = searchPoint.z;
+            point.r = 0;
+            point.g = 255;
+            point.b = 0;
+            use_cloud->push_back(point);
       }
     }
 
