@@ -5,7 +5,8 @@
 #include <pcl/segmentation/segment_differences.h>
 
 #include <vector>
-
+#include <algorithm>
+#include <random>
 
 #include <pcl/common/impl/centroid.hpp>
 #include <pcl/common/pca.h>
@@ -74,6 +75,20 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
   
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr use_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_visualized (new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_pole (new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ground (new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_wall (new pcl::PointCloud<pcl::PointXYZRGB>);
+  
+  //20231114
+  int pole_pc_num = 0;
+  int ground_pc_num = 0;
+  int wall_pc_num = 0;
+  std::vector<int> pole_random_nums;
+  std::vector<int> ground_random_nums;
+  std::vector<int> wall_random_nums;
+  pole_random_nums.clear();
+  ground_random_nums.clear();
+  wall_random_nums.clear();
   
   for(size_t i= 0; i<pcl_input_ds_rep->size(); i++){
     pcl::PointXYZ searchPoint = pcl_input_ds_rep->points[i];
@@ -155,14 +170,14 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
       //std::cerr << "dimension: " << d << std::endl;
 
       // Visualize
-      pcl::PointXYZRGB color_point;
-      color_point.x = searchPoint.x;
-      color_point.y = searchPoint.y;
-      color_point.z = searchPoint.z;
-      color_point.r = 255;
-      color_point.g = 255;
-      color_point.b = 255;
-      cloud_visualized->push_back(color_point);
+      // pcl::PointXYZRGB color_point;
+      // color_point.x = searchPoint.x;
+      // color_point.y = searchPoint.y;
+      // color_point.z = searchPoint.z;
+      // color_point.r = 255;
+      // color_point.g = 255;
+      // color_point.b = 255;
+      // cloud_visualized->push_back(color_point);
 
       if (d==1){
         Eigen::Matrix3f& eigen_vectors = pca.getEigenVectors();
@@ -182,8 +197,11 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
             point.r = 255;
             point.g = 241;
             point.b = 0;
-            //cloud_visualized->push_back(point);
-            use_cloud->push_back(point);
+            // cloud_visualized->push_back(point);
+            // use_cloud->push_back(point);
+            cloud_pole->push_back(point);
+            pole_random_nums.push_back(pole_pc_num);
+            pole_pc_num++;
           }
         }
         else{
@@ -197,15 +215,14 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
             // point.b = 0;
             // cloud_visualized->push_back(point);
             
-            pcl::PointXYZRGB point;
-            point.x = searchPoint.x;
-            point.y = searchPoint.y;
-            point.z = searchPoint.z;
-            point.r = 255;
-            point.g = 0;
-            point.b = 0;
-            use_cloud->push_back(point);
-            
+            // pcl::PointXYZRGB point;
+            // point.x = searchPoint.x;
+            // point.y = searchPoint.y;
+            // point.z = searchPoint.z;
+            // point.r = 255;
+            // point.g = 0;
+            // point.b = 0;
+            // use_cloud->push_back(point);
           //}
         }
 
@@ -249,7 +266,10 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
             point_ground.r = 0;
             point_ground.g = 100;
             point_ground.b = 255;
-            use_cloud->push_back(point_ground);
+            //use_cloud->push_back(point_ground);
+            cloud_ground->push_back(point_ground);
+            ground_random_nums.push_back(ground_pc_num);
+            ground_pc_num++;
           }
         }
         else{     
@@ -261,7 +281,10 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
             point_wall.r = 207;
             point_wall.g = 249;
             point_wall.b = 255;
-            use_cloud->push_back(point_wall);
+            //use_cloud->push_back(point_wall);
+            cloud_wall->push_back(point_wall);
+            wall_random_nums.push_back(wall_pc_num);
+            wall_pc_num++;
           }
         }
       }    
@@ -289,16 +312,41 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
       // }
 
 
-      }
+    }
 
   }
   
+  //shuffle
+  std::random_device seed_gen;
+  std::mt19937 engine(seed_gen());
+  std::shuffle(pole_random_nums.begin(), pole_random_nums.end(), engine);
+  std::shuffle(ground_random_nums.begin(), ground_random_nums.end(), engine);
+  std::shuffle(wall_random_nums.begin(), wall_random_nums.end(), engine);
+
+   //各種類別の点群からrandom_numsの値を使って点群を抽出
+  int cnt_pole,cnt_ground,cnt_wall;
+  if(pole_random_nums.size()<750){cnt_pole = pole_random_nums.size();}
+  else{cnt_pole=750;}
+  for(int i = 0; i<cnt_pole;i++){
+    use_cloud->push_back(cloud_pole->points[pole_random_nums[i]]);
+  }
+  if(ground_random_nums.size()<500){cnt_ground = ground_random_nums.size();}
+  else{cnt_ground=500;}
+  for(int i = 0; i<cnt_ground;i++){
+    use_cloud->push_back(cloud_ground->points[ground_random_nums[i]]);
+  }
+  if(wall_random_nums.size()<250){cnt_wall = wall_random_nums.size();}
+  else{cnt_wall=250;}
+  for(int i = 0; i<cnt_wall;i++){
+    use_cloud->push_back(cloud_wall->points[wall_random_nums[i]]);
+  }
+  
   //pcl::toROSMsg(*cloud_visualized, output);
-  pcl::RandomSample <pcl::PointXYZRGB> random;
-  random.setInputCloud(use_cloud);
-  random.setSeed (std::rand ());
-  random.setSample((unsigned int)(1500));
-  random.filter(*use_cloud);
+  // pcl::RandomSample <pcl::PointXYZRGB> random;
+  // random.setInputCloud(use_cloud);
+  // random.setSeed (std::rand ());
+  // random.setSample((unsigned int)(1500));
+  // random.filter(*use_cloud);
   pcl::toROSMsg(*use_cloud, output);
   output.header = input->header;
 
