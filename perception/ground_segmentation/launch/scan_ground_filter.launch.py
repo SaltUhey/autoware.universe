@@ -44,15 +44,38 @@ def launch_setup(context, *args, **kwargs):
             ],
             parameters=[
                 {
-                    "global_slope_max_angle_deg": 10.0,
-                    "local_slope_max_angle_deg": 30.0,
-                    "split_points_distance_tolerance": 0.2,
-                    "split_height_distance": 0.2,
+                    "global_slope_max_angle_deg": 1.5, #10
+                    "local_slope_max_angle_deg": 1.5, #10
+                    "split_points_distance_tolerance": 0.2, #0.2
+                    "split_height_distance": 0.2, #0.2
+                    "non_ground_height_threshold": 0.2, #0.2
+                    "gnd_grid_buffer_size": 4, #4
+                    "grid_size_m": 0.5, #0.5
                 },
                 vehicle_info_param,
             ],
         ),
     ]
+
+    # nodes = [
+    #     ComposableNode(
+    #         package="ground_segmentation",
+    #         plugin="ground_segmentation::RayGroundFilterComponent",
+    #         name="ray_ground_filter",
+    #         remappings=[
+    #             ("input", LaunchConfiguration("input/pointcloud")),
+    #             ("output", LaunchConfiguration("output/pointcloud")),
+    #         ],
+    #         parameters=[
+    #             {
+    #                 "general_max_slope": 0.1,
+    #                 "local_max_slope": 1.0, 
+    #                 "min_height_threshold": 0.2,
+    #             },
+    #             vehicle_info_param,
+    #         ],
+    #     ),
+    # ] 
 
     loader = LoadComposableNodes(
         condition=LaunchConfigurationNotEquals("container", ""),
@@ -98,8 +121,11 @@ def generate_launch_description():
         [
             vehicle_info_param,
             add_launch_arg("container", ""),
-            add_launch_arg("input/pointcloud", "pointcloud"),
-            add_launch_arg("output/pointcloud", "no_ground/pointcloud"),
+            # add_launch_arg("input/pointcloud", "pointcloud"),
+            # add_launch_arg("input/pointcloud", "measurement_range/pointcloud"),
+            add_launch_arg("input/pointcloud", "/sensing/lidar/top/outlier_filtered/pointcloud"),
+            add_launch_arg("output/pointcloud", "ground/pointcloud"),
+            # add_launch_arg("output_2/pointcloud", "ground/pointcloud"),
         ]
         + [OpaqueFunction(function=launch_setup)]
     )

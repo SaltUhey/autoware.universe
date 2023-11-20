@@ -220,9 +220,15 @@ private:
   void classifyPointCloud(
     std::vector<PointCloudRefVector> & in_radial_ordered_clouds,
     pcl::PointIndices & out_no_ground_indices);
+  void classifyGroundPointCloud(
+    std::vector<PointCloudRefVector> & in_radial_ordered_clouds,
+    pcl::PointIndices & out_ground_indices);
   void classifyPointCloudGridScan(
     std::vector<PointCloudRefVector> & in_radial_ordered_clouds,
     pcl::PointIndices & out_no_ground_indices);
+  void classifyGroundPointCloudGridScan(
+    std::vector<PointCloudRefVector> & in_radial_ordered_clouds,
+    pcl::PointIndices & out_ground_indices);
   /*!
    * Re-classifies point of ground cluster based on their height
    * @param gnd_cluster Input ground cluster for re-checking

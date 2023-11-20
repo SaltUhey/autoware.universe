@@ -17,6 +17,7 @@
 #include <pcl/common/common_headers.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/filters/random_sample.h>
+#include <pcl/filters/passthrough.h>
 
 #include <time.h>
 
@@ -257,7 +258,18 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
         float angle_N_rad = std::acos(eigenvector_3.dot(z_axis));//normal_axis
         float angle_N_deg = angle_N_rad*(180.0/M_PI);
         if ((angle_N_deg < 10) || (170 < angle_N_deg)){
-          int skip = 10;
+          // pcl::PassThrough<pcl::PointXYZ> pass_x;
+          // pass_x.setInputCloud (cloud_surr_1search);
+          // pass_x.setFilterFieldName ("x");
+          // pass_x.setFilterLimits (-100,100);
+          // pass_x.filter(*cloud_surr_1search);
+          // pcl::PassThrough<pcl::PointXYZ> pass_y;
+          // pass_y.setInputCloud (cloud_surr_1search);
+          // pass_y.setFilterFieldName ("y");
+          // pass_y.setFilterLimits (-50,50);
+          // pass_y.filter(*cloud_surr_1search);
+
+          int skip = 5;
           for (size_t i = 0; i<cloud_surr_1search->size();i+=skip){
             pcl::PointXYZRGB point_ground;
             point_ground.x = cloud_surr_1search->points[i].x;
@@ -325,18 +337,21 @@ void VoxelGridKnnDimensionDownsampleFilterComponent::filter(
 
    //各種類別の点群からrandom_numsの値を使って点群を抽出
   int cnt_pole,cnt_ground,cnt_wall;
-  if(pole_random_nums.size()<750){cnt_pole = pole_random_nums.size();}
-  else{cnt_pole=750;}
+  const int pole_size = 500;
+  const int ground_size = 200;
+  const int wall_size = 800;
+  if(pole_random_nums.size()<pole_size){cnt_pole = pole_random_nums.size();}
+  else{cnt_pole=pole_size;}
   for(int i = 0; i<cnt_pole;i++){
     use_cloud->push_back(cloud_pole->points[pole_random_nums[i]]);
   }
-  if(ground_random_nums.size()<500){cnt_ground = ground_random_nums.size();}
-  else{cnt_ground=500;}
+  if(ground_random_nums.size()<ground_size){cnt_ground = ground_random_nums.size();}
+  else{cnt_ground=ground_size;}
   for(int i = 0; i<cnt_ground;i++){
     use_cloud->push_back(cloud_ground->points[ground_random_nums[i]]);
   }
-  if(wall_random_nums.size()<250){cnt_wall = wall_random_nums.size();}
-  else{cnt_wall=250;}
+  if(wall_random_nums.size()<wall_size){cnt_wall = wall_random_nums.size();}
+  else{cnt_wall=wall_size;}
   for(int i = 0; i<cnt_wall;i++){
     use_cloud->push_back(cloud_wall->points[wall_random_nums[i]]);
   }
