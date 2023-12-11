@@ -65,6 +65,7 @@ RingGroundFilterComponent::RingGroundFilterComponent(const rclcpp::NodeOptions &
     use_recheck_ground_cluster_ = declare_parameter("use_recheck_ground_cluster", true);
     radial_dividers_num_ = std::ceil(2.0 * M_PI / radial_divider_angle_rad_);
     vehicle_info_ = VehicleInfoUtil(*this).getVehicleInfo();
+    variance_judge_vegetation_ = declare_parameter("variance_judge_vegetation", 0.03f);
 
     grid_mode_switch_grid_id_ =
       grid_mode_switch_radius_ / grid_size_m_;  // changing the mode of grid division
@@ -425,6 +426,7 @@ void RingGroundFilterComponent::judgeVegetation(
   std::vector<PointCloudRefVector> & in_radial_ordered_clouds,
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr & out_cloud)
 {
+   std::cerr<<"variance_judge_vegetation_:"<<variance_judge_vegetation_<<std::endl;
   out_cloud->clear();
   for (size_t i = 0; i < in_radial_ordered_clouds.size(); ++i) {
     std::vector<float> r_data;
@@ -450,7 +452,7 @@ void RingGroundFilterComponent::judgeVegetation(
     }
     variance /= r_data.size();//分散
     std::cerr<<"variance:"<<variance<<std::endl;
-    if(variance<0.05){
+    if(variance < variance_judge_vegetation_){
       for(size_t i =0; i<cloud_1grid->size(); i++){
         pcl::PointXYZRGB point;
         point.x = cloud_1grid->points[i].x;
@@ -868,8 +870,9 @@ void RingGroundFilterComponent::convertPointcloudRingVector(
     if (cloud_each_ring[ring_num].cloud == nullptr) {
       cloud_each_ring[ring_num].cloud = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
     }
+    if(in_cloud_ptr->points[i].z < 1.5){
     cloud_each_ring[ring_num].cloud->push_back(point);
-    //std::cerr<<"debug_0"<<std::endl;
+    }
   }
   for (std::size_t i = 0; i < cloud_each_ring.size(); i++) {
     int ring_num = i+1;
@@ -913,13 +916,10 @@ void RingGroundFilterComponent::filter(
   stop_watch_ptr_->toc("processing_time", true);
 
   pcl::PointCloud<PointXYZIRADRT>::Ptr current_sensor_cloud_ptr(new pcl::PointCloud<PointXYZIRADRT>);
-  
   pcl::fromROSMsg(*input, *current_sensor_cloud_ptr);
 
-  //pcl::PointCloud<PointXYZIRADT>::Ptr input_cloud_ex_ptr(new pcl::PointCloud<PointXYZIRADT>);//20231127
-
   pcl::PointIndices no_ground_indices;
-  pcl::PointIndices ground_indices;//20231120
+  pcl::PointIndices ground_indices;
   pcl::PointCloud<pcl::PointXYZ>::Ptr no_ground_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>);
   no_ground_cloud_ptr->points.reserve(current_sensor_cloud_ptr->points.size());
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr ground_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -927,40 +927,15 @@ void RingGroundFilterComponent::filter(
   // pcl::PointCloud<pcl::PointXYZRGB>::Ptr merged_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
   // merged_cloud_ptr->points.reserve(current_sensor_cloud_ptr->points.size());
 
-  //PointXYZIRADTをvector<1ring>に変換 20231204
+  //PointXYZIRADTをvector<1ring>に変換
   std::vector<OneRing> cloud_each_ring;
-  convertPointcloudRingVector(current_sensor_cloud_ptr,cloud_each_ring);
-  std::cerr<<"ring1の点群数"<<cloud_each_ring[8].cloud->size()<<std::endl;
-  no_ground_cloud_ptr = cloud_each_ring[8].cloud;
+  convertPointcloudRingVector(current_sensor_cloud_ptr,cloud_each_ring);//z軸の切り捨ての考慮もここでしている
+  //ここで各リングごとにやっていく
+  std::cerr<<"ring1の点群数"<<cloud_each_ring[10].cloud->size()<<std::endl;
+  no_ground_cloud_ptr = cloud_each_ring[10].cloud;
   
-  //test
-  // for(size_t i = 0; i<cloud_each_ring.size(); i++){
-  //   for(size_t j=0; j<cloud_each_ring[i].cloud->size(); j++){
-  //     no_ground_cloud_ptr->push_back(cloud_each_ring[i].cloud->points[j]);
-  //   }
-  // }
-  
-  //order
-  // for(size_t i = 0; i<cloud_each_ring.size(); i++){
-  //   std::sort(cloud_each_ring[i].cloud.begin(), cloud_each_ring[i].cloud.end(), [](const pcl::PointXYZ& a, const pcl::PointXYZ& b) {
-  //   return atan2(a.y, a.x) < atan2(b.y, b.x);
-  //   });
-  //  for(size_t j=0; j<cloud_each_ring[i].cloud->size(); j++){
-      
-  //    //theta = atan2(cloud_each_ring[i].cloud->points[j].y, cloud_each_ring[i].cloud->points[j].x);
-  //    radius = sqrt(std::pow(cloud_each_ring[i].cloud->points[j].x, 2) + std::pow(cloud_each_ring[i].cloud->points[j].y, 2))
-  //  }
-  //}
-
-  //check
-  // for(size_t i = 0; i<cloud_each_ring.size(); i++){
-  //   for(float degree =0; degree < 360; degree+=10.0f){
-  //   }
-  // }
-
   //20231211
   std::vector<PointCloudRefVector> radial_ordered_points;
-  //zのfilterの追加
   if(elevation_grid_mode_){
     convertPointcloudGridScan(no_ground_cloud_ptr,radial_ordered_points);
     judgeVegetation(radial_ordered_points,ground_cloud_ptr);

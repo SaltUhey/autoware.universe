@@ -89,7 +89,7 @@ def launch_setup(context, *args, **kwargs):
             ],
             parameters=[
                 {
-
+                    "variance_judge_vegetation": 0.01,
                 },
                 vehicle_info_param,
             ],
