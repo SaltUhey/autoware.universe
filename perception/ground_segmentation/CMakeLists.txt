@@ -25,6 +25,7 @@ ament_auto_add_library(ground_segmentation SHARED
   src/ray_ground_filter_nodelet.cpp
   src/ransac_ground_filter_nodelet.cpp
   src/scan_ground_filter_nodelet.cpp
+  src/ring_ground_filter_nodelet.cpp
 )
 
 target_link_libraries(ground_segmentation
@@ -56,6 +57,10 @@ rclcpp_components_register_node(ground_segmentation
   PLUGIN "ground_segmentation::ScanGroundFilterComponent"
   EXECUTABLE scan_ground_filter_node)
 
+# -- Ring Ground Filter --
+rclcpp_components_register_node(ground_segmentation
+  PLUGIN "ground_segmentation::RingGroundFilterComponent"
+  EXECUTABLE ring_ground_filter_node)
 
 ament_auto_package(INSTALL_TO_SHARE
   launch

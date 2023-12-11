@@ -33,29 +33,30 @@ def launch_setup(context, *args, **kwargs):
     with open(vehicle_info_param_path, "r") as f:
         vehicle_info_param = yaml.safe_load(f)["/**"]["ros__parameters"]
 
-    nodes = [
-        ComposableNode(
-            package="ground_segmentation",
-            plugin="ground_segmentation::ScanGroundFilterComponent",
-            name="scan_ground_filter",
-            remappings=[
-                ("input", LaunchConfiguration("input/pointcloud")),
-                ("output", LaunchConfiguration("output/pointcloud")),
-            ],
-            parameters=[
-                {
-                    "global_slope_max_angle_deg": 1.5, #10
-                    "local_slope_max_angle_deg": 1.5, #10
-                    "split_points_distance_tolerance": 0.2, #0.2
-                    "split_height_distance": 0.2, #0.2
-                    "non_ground_height_threshold": 0.2, #0.2
-                    "gnd_grid_buffer_size": 4, #4
-                    "grid_size_m": 0.5, #0.5
-                },
-                vehicle_info_param,
-            ],
-        ),
-    ]
+    # nodes = [
+    #     ComposableNode(
+    #         package="ground_segmentation",
+    #         plugin="ground_segmentation::ScanGroundFilterComponent",
+    #         name="scan_ground_filter",
+    #         remappings=[
+    #             ("input", LaunchConfiguration("input/pointcloud")),
+    #             ("output", LaunchConfiguration("output/pointcloud")),
+    #         ],
+    #         parameters=[
+    #             {
+    #                 "global_slope_max_angle_deg": 1.5, #10
+    #                 "local_slope_max_angle_deg": 1.0, #10
+    #                 "split_points_distance_tolerance": 0.05, #0.2
+    #                 "split_height_distance": 0.05, #0.2
+    #                 "non_ground_height_threshold": 0.15, #0.2
+    #                 "gnd_grid_buffer_size": 20, #4
+    #                 "grid_size_m": 0.1, #0.5
+    #                 "detection_range_z_max": 2.5, #2.5
+    #             },
+    #             vehicle_info_param,
+    #         ],
+    #     ),
+    # ]
 
     # nodes = [
     #     ComposableNode(
@@ -76,6 +77,24 @@ def launch_setup(context, *args, **kwargs):
     #         ],
     #     ),
     # ] 
+
+        nodes = [
+        ComposableNode(
+            package="ground_segmentation",
+            plugin="ground_segmentation::RingGroundFilterComponent",
+            name="ring_ground_filter",
+            remappings=[
+                ("input", LaunchConfiguration("input/pointcloud")),
+                ("output", LaunchConfiguration("output/pointcloud")),
+            ],
+            parameters=[
+                {
+
+                },
+                vehicle_info_param,
+            ],
+        ),
+    ] 
 
     loader = LoadComposableNodes(
         condition=LaunchConfigurationNotEquals("container", ""),
@@ -123,8 +142,9 @@ def generate_launch_description():
             add_launch_arg("container", ""),
             # add_launch_arg("input/pointcloud", "pointcloud"),
             # add_launch_arg("input/pointcloud", "measurement_range/pointcloud"),
-            add_launch_arg("input/pointcloud", "/sensing/lidar/top/outlier_filtered/pointcloud"),
-            add_launch_arg("output/pointcloud", "ground/pointcloud"),
+            # add_launch_arg("input/pointcloud", "/sensing/lidar/top/outlier_filtered/pointcloud"),
+            add_launch_arg("input/pointcloud", "/sensing/lidar/top/pointcloud_raw_ex"),
+            add_launch_arg("output/pointcloud", "/ground_filter/pointcloud"),
             # add_launch_arg("output_2/pointcloud", "ground/pointcloud"),
         ]
         + [OpaqueFunction(function=launch_setup)]

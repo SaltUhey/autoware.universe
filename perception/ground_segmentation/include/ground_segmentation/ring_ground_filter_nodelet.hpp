@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GROUND_SEGMENTATION__SCAN_GROUND_FILTER_NODELET_HPP_
-#define GROUND_SEGMENTATION__SCAN_GROUND_FILTER_NODELET_HPP_
+#ifndef GROUND_SEGMENTATION__RING_GROUND_FILTER_NODELET_HPP_
+#define GROUND_SEGMENTATION__RING_GROUND_FILTER_NODELET_HPP_
 
 #include "pointcloud_preprocessor/filter.hpp"
 
@@ -38,13 +38,17 @@
 #include <string>
 #include <vector>
 
-class ScanGroundFilterTest;
+// #include "../../../common/autoware_point_types/include/autoware_point_types/types.hpp"
+#include "autoware_point_types/types.hpp"
+
+class RingGroundFilterTest;
 
 namespace ground_segmentation
 {
 using vehicle_info_util::VehicleInfo;
+using autoware_point_types::PointXYZIRADRT;//20231204
 
-class ScanGroundFilterComponent : public pointcloud_preprocessor::Filter
+class RingGroundFilterComponent : public pointcloud_preprocessor::Filter
 {
 private:
   // classified point label
@@ -146,6 +150,14 @@ private:
     std::vector<float> getHeightList() { return height_list; }
   };
 
+  //20231204
+  struct OneRing{
+    // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
+    int ring_num;
+  };
+
+
   void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
 
@@ -230,6 +242,10 @@ private:
     std::vector<PointCloudRefVector> & in_radial_ordered_clouds,
     pcl::PointIndices & out_ground_indices);
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr merge_two_pc(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc1, pcl::PointCloud<pcl::PointXYZ>::Ptr pc2); //20231127
+  void judgeVegetation(
+    std::vector<PointCloudRefVector> & in_radial_ordered_clouds,
+    pcl::PointCloud<pcl::PointXYZI>::Ptr & cloud);
+  
 
   /*!
    * Re-classifies point of ground cluster based on their height
@@ -251,6 +267,9 @@ private:
     const pcl::PointCloud<pcl::PointXYZ>::Ptr in_cloud_ptr, const pcl::PointIndices & in_indices,
     pcl::PointCloud<pcl::PointXYZ>::Ptr out_object_cloud_ptr);
 
+  void convertPointcloudRingVector(
+    const pcl::PointCloud<PointXYZIRADRT>::Ptr in_cloud_ptr, std::vector<OneRing> & cloud_each_ring);
+
   /** \brief Parameter service callback result : needed to be hold */
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
@@ -264,11 +283,11 @@ private:
 
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  explicit ScanGroundFilterComponent(const rclcpp::NodeOptions & options);
+  explicit RingGroundFilterComponent(const rclcpp::NodeOptions & options);
 
   // for test
-  friend ScanGroundFilterTest;
+  friend RingGroundFilterTest;
 };
 }  // namespace ground_segmentation
 
-#endif  // GROUND_SEGMENTATION__SCAN_GROUND_FILTER_NODELET_HPP_
+#endif  // GROUND_SEGMENTATION__RING_GROUND_FILTER_NODELET_HPP_
