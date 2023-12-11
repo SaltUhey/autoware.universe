@@ -421,38 +421,61 @@ void RingGroundFilterComponent::classifyPointCloudGridScan(
   }
 }
 
-// void RingGroundFilterComponent::judgeVegetation(
-//   std::vector<PointCloudRefVector> & in_radial_ordered_clouds,
-//   pcl::PointCloud<pcl::PointXYZI>::Ptr & cloud)
-// {
-//   cloud->clear();
-//   for (size_t i = 0; i < in_radial_ordered_clouds.size(); ++i) {
-//     std::vector<double> r_data;
-//     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_1grid;
-//     for (size_t j = 0; j < in_radial_ordered_clouds[i].size(); ++j) {
-//       auto * p = &in_radial_ordered_clouds[i][j];
-//       r_data.push_back(p.radius);
-//       cloud_1grid->push_back(p->orig_point);
-//     }
+void RingGroundFilterComponent::judgeVegetation(
+  std::vector<PointCloudRefVector> & in_radial_ordered_clouds,
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr & out_cloud)
+{
+  out_cloud->clear();
+  for (size_t i = 0; i < in_radial_ordered_clouds.size(); ++i) {
+    std::vector<float> r_data;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_1grid(new pcl::PointCloud<pcl::PointXYZ>);
+    for (size_t j = 0; j < in_radial_ordered_clouds[i].size(); ++j) {
+      auto * p = &in_radial_ordered_clouds[i][j];
+      
+      r_data.push_back(p->radius);
+      
+      cloud_1grid->push_back(*(p->orig_point));
+    }
     
-//     // Judge 1grid frame
-//     for(int i = 0; i < r_data.size(); i++) {
-//         sum += data[i];
-//     }
-//     mean = sum / data.size();
-//     for(int i = 0; i < data.size(); i++) {
-//         variance += pow(data[i] - mean, 2);
-//     }
-//     variance /= data.size();//分散
-//     if(variance<1.0){
-//       for(size_t i =0; i<cloud_1grid->size(); i++){
-//         cloud->push_back(cloud_1grid[i]);
-//       }
-//     }
+    // Judge 1grid frame
+    float sum = 0.0;
+    float variance = 0.0;
+    for(size_t i = 0; i < r_data.size(); i++) {
+        sum += r_data[i];
+    }
 
-//   }
-
-// }
+    const float mean = sum / r_data.size();
+    for(size_t i = 0; i < r_data.size(); i++) {
+        variance += pow(r_data[i] - mean, 2);
+    }
+    variance /= r_data.size();//分散
+    std::cerr<<"variance:"<<variance<<std::endl;
+    if(variance<0.05){
+      for(size_t i =0; i<cloud_1grid->size(); i++){
+        pcl::PointXYZRGB point;
+        point.x = cloud_1grid->points[i].x;
+        point.y = cloud_1grid->points[i].y;
+        point.z = cloud_1grid->points[i].z;
+        point.r = 255;
+        point.g = 255;
+        point.b = 255;
+        out_cloud->push_back(point);
+      }
+    }
+    else{
+      for(size_t i =0; i<cloud_1grid->size(); i++){
+        pcl::PointXYZRGB point;
+        point.x = cloud_1grid->points[i].x;
+        point.y = cloud_1grid->points[i].y;
+        point.z = cloud_1grid->points[i].z;
+        point.r = 50;
+        point.g = 255;
+        point.b = 30;
+        out_cloud->push_back(point);
+      }
+    } 
+  }
+}
 
 void RingGroundFilterComponent::classifyGroundPointCloudGridScan(
   std::vector<PointCloudRefVector> & in_radial_ordered_clouds,
@@ -889,19 +912,17 @@ void RingGroundFilterComponent::filter(
   std::scoped_lock lock(mutex_);
   stop_watch_ptr_->toc("processing_time", true);
 
-  // pcl::PointCloud<pcl::PointXYZ>::Ptr current_sensor_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::PointCloud<PointXYZIRADRT>::Ptr current_sensor_cloud_ptr(new pcl::PointCloud<PointXYZIRADRT>);
+  
   pcl::fromROSMsg(*input, *current_sensor_cloud_ptr);
 
   //pcl::PointCloud<PointXYZIRADT>::Ptr input_cloud_ex_ptr(new pcl::PointCloud<PointXYZIRADT>);//20231127
-
-  std::vector<PointCloudRefVector> radial_ordered_points;
 
   pcl::PointIndices no_ground_indices;
   pcl::PointIndices ground_indices;//20231120
   pcl::PointCloud<pcl::PointXYZ>::Ptr no_ground_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>);
   no_ground_cloud_ptr->points.reserve(current_sensor_cloud_ptr->points.size());
-  pcl::PointCloud<pcl::PointXYZ>::Ptr ground_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr ground_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
   ground_cloud_ptr->points.reserve(current_sensor_cloud_ptr->points.size());
   // pcl::PointCloud<pcl::PointXYZRGB>::Ptr merged_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
   // merged_cloud_ptr->points.reserve(current_sensor_cloud_ptr->points.size());
@@ -909,11 +930,8 @@ void RingGroundFilterComponent::filter(
   //PointXYZIRADTをvector<1ring>に変換 20231204
   std::vector<OneRing> cloud_each_ring;
   convertPointcloudRingVector(current_sensor_cloud_ptr,cloud_each_ring);
-  std::cerr<<"debug_2"<<std::endl;
-  std::cerr<<"ring1の点群数"<<cloud_each_ring[0].cloud->size()<<std::endl;
-  std::cerr<<"ring1の点群の1点のx座標"<<cloud_each_ring[0].cloud->points[0].x<<std::endl;
-  no_ground_cloud_ptr = cloud_each_ring[0].cloud;
-  std::cerr<<"代入確認"<<no_ground_cloud_ptr->size()<<std::endl;
+  std::cerr<<"ring1の点群数"<<cloud_each_ring[8].cloud->size()<<std::endl;
+  no_ground_cloud_ptr = cloud_each_ring[8].cloud;
   
   //test
   // for(size_t i = 0; i<cloud_each_ring.size(); i++){
@@ -922,8 +940,6 @@ void RingGroundFilterComponent::filter(
   //   }
   // }
   
-  std::cerr<<"debug_3"<<std::endl;
-
   //order
   // for(size_t i = 0; i<cloud_each_ring.size(); i++){
   //   std::sort(cloud_each_ring[i].cloud.begin(), cloud_each_ring[i].cloud.end(), [](const pcl::PointXYZ& a, const pcl::PointXYZ& b) {
@@ -943,234 +959,18 @@ void RingGroundFilterComponent::filter(
   // }
 
   //20231211
-  // std::vector<PointCloudRefVector> radial_ordered_points;
-  // //zのfilterの追加
-  // convertPointcloudGridScan(no_ground_cloud_ptr,radial_ordered_points);
-  // judgeVegetation(radial_ordered_points,ground_cloud_ptr);
-
-
-  // if (elevation_grid_mode_) {
-  //   convertPointcloudGridScan(current_sensor_cloud_ptr, radial_ordered_points);
-  //   classifyPointCloudGridScan(radial_ordered_points, no_ground_indices);
-  //   classifyGroundPointCloudGridScan(radial_ordered_points, ground_indices);//20231120
-  // } else {
-  //   convertPointcloud(current_sensor_cloud_ptr, radial_ordered_points);
-  //   classifyPointCloud(radial_ordered_points, no_ground_indices);
-  //   classifyGroundPointCloud(radial_ordered_points, ground_indices);//20231120
-  // }
-
-  // extractObjectPoints(current_sensor_cloud_ptr, no_ground_indices, no_ground_cloud_ptr);
-  // extractObjectPoints(current_sensor_cloud_ptr, ground_indices, ground_cloud_ptr);//20231120
-
-  // auto no_ground_cloud_msg_ptr = std::make_shared<PointCloud2>();
-  // pcl::toROSMsg(*no_ground_cloud_ptr, *no_ground_cloud_msg_ptr);
-  // no_ground_cloud_msg_ptr->header = input->header;
-  // output = *no_ground_cloud_msg_ptr;
-
-  // auto ground_cloud_msg_ptr = std::make_shared<PointCloud2>();
-  // pcl::toROSMsg(*ground_cloud_ptr, *ground_cloud_msg_ptr);
-  // ground_cloud_msg_ptr->header = input->header;
-  // output = *ground_cloud_msg_ptr;
-
-  // //20231127 voxel_grid_knn_dimension_downsample_filter_nodelet------------------
-  // pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_input_ds_rep(new pcl::PointCloud<pcl::PointXYZ>); //代表点群
-  // pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_input_ds_ref(new pcl::PointCloud<pcl::PointXYZ>); //参照点群
-  
-  // pcl_input_ds_rep->points.reserve(no_ground_cloud_ptr->points.size());
-  // pcl::VoxelGrid<pcl::PointXYZ> filter_rough;
-  // filter_rough.setInputCloud(no_ground_cloud_ptr);
-  // // filter.setSaveLeafLayout(true);
-  // const float rep_voxel_size= 3.0;
-  // filter_rough.setLeafSize(rep_voxel_size, rep_voxel_size, rep_voxel_size);
-  // filter_rough.filter(*pcl_input_ds_rep);//粗めのダウンサンプリング後の点群：代表点群
-
-  // pcl_input_ds_ref->points.reserve(no_ground_cloud_ptr->points.size());
-  // pcl::VoxelGrid<pcl::PointXYZ> filter_detail;
-  // filter_detail.setInputCloud(no_ground_cloud_ptr);
-  // // filter.setSaveLeafLayout(true);
-  // const float ref_voxel_size = 0.3;
-  // filter_detail.setLeafSize(ref_voxel_size, ref_voxel_size, ref_voxel_size);
-  // filter_detail.filter(*pcl_input_ds_ref);//細かめのダウンサンプリング後の点群：参照点群
-
-  // pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-  // kdtree.setInputCloud (pcl_input_ds_ref);
-  // int K = 50; // K nearest neighbor search
-  // std::vector<int> pointIdxKNNSearch(K); //must be resized to k a priori
-  // std::vector<float> pointKNNSquaredDistance(K); //must be resized to k a priori
-
-  // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_use (new pcl::PointCloud<pcl::PointXYZRGB>);
-  // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_pole (new pcl::PointCloud<pcl::PointXYZRGB>);
-  // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_wall (new pcl::PointCloud<pcl::PointXYZRGB>);
-  // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ground (new pcl::PointCloud<pcl::PointXYZRGB>);
-  
-  // int pole_pc_num = 0;
-  // int ground_pc_num = 0;
-  // int wall_pc_num = 0;
-  // std::vector<int> pole_random_nums;
-  // std::vector<int> ground_random_nums;
-  // std::vector<int> wall_random_nums;
-  // pole_random_nums.clear();
-  // ground_random_nums.clear();
-  // wall_random_nums.clear();
-
-  // for(size_t i= 0; i<pcl_input_ds_rep->size(); i++){
-  //   pcl::PointXYZ searchPoint = pcl_input_ds_rep->points[i];
-  //   kdtree.nearestKSearch (searchPoint, K, pointIdxKNNSearch, pointKNNSquaredDistance);
-  //   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_surr_1search (new pcl::PointCloud<pcl::PointXYZ>);
-  //   //cloud_surr_1search->push_back(searchPoint);
-    
-  //   for (size_t j =0; j < pointIdxKNNSearch.size(); j++){
-  //     if(pointKNNSquaredDistance[i]<5.0){
-  //     cloud_surr_1search->push_back(pcl_input_ds_ref->points[pointIdxKNNSearch[j]]);
-  //     }
-  //   }
-
-  //   //Removing noise
-  //   pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-  //   sor.setInputCloud (cloud_surr_1search);
-  //   sor.setMeanK (K/2);//The number of points to use for mean distance estimation
-  //   sor.setStddevMulThresh (ref_voxel_size); //Standard deviations threshold
-  //   sor.filter (*cloud_surr_1search);
-
-  //   const int judge_num = 10;
-  //   if(cloud_surr_1search->size()>=judge_num){
-  //     //judge cloud_surr_1search(point cloud) feature
-  //     pcl::PCA<pcl::PointXYZ> pca;
-  //     // pcl::PointIndices::Ptr pca_indices(new pcl::PointIndices());
-  //     pca.setInputCloud(cloud_surr_1search);
-  //     //pca.setIndices(pointIdxKNNSearch);//よくわからない
-  //     Eigen::Vector3f& eigen_values = pca.getEigenValues();
-      
-  //     //HERE Comupute eigenvalue difference features
-  //     double lam1,lam2,lam3;
-  //     lam1 = eigen_values (0), lam2 = eigen_values (1), lam3 = eigen_values (2);
-  //     // std::cerr << "lam1(eigen_values (0))" << lam1 << std::endl;
-  //     // std::cerr << "lam2(eigen_values (1))" << lam2 << std::endl;
-  //     // std::cerr << "lam3(eigen_values (2))" << lam3 << std::endl;
-  //     const double s1=std::abs(lam1-lam2);
-  //     const double s2=std::abs(lam2-lam3);
-  //     const double s3=std::abs(lam3);
-  //     const double evalue_diff_ftrs[4]={0,s1,s2,s3};
-  //     int d=0;
-  //     for(int i=1;i<=3;i++)
-  //     {
-  //       if(evalue_diff_ftrs[i-1]<evalue_diff_ftrs[i]){d=i;}
-  //     }
-
-  //     if (d==1){
-  //       Eigen::Matrix3f& eigen_vectors = pca.getEigenVectors();
-  //       const Eigen::Vector3f eigenvector_1= eigen_vectors.col(0); //first eigen vector
-  //       //std::cerr << "eigenvector_1:\n" << eigenvector_1 << std::endl;
-  //       const Eigen::Vector3f z_axis(0, 0, 1);
-  //       float angle_Z_rad = std::acos(eigenvector_1.dot(z_axis));
-  //       float angle_Z_deg = angle_Z_rad*(180.0/M_PI);
-  //       //std::cerr << "angle_Z_deg" << angle_Z_deg << "[degree]" <<std::endl;
-
-  //       if ((angle_Z_deg < 10) || (170 < angle_Z_deg) ) {
-  //         for (size_t i = 0; i<cloud_surr_1search->size();i++){
-  //           pcl::PointXYZRGB point_pole;
-  //           point_pole.x = cloud_surr_1search->points[i].x;
-  //           point_pole.y = cloud_surr_1search->points[i].y;
-  //           point_pole.z = cloud_surr_1search->points[i].z;
-  //           point_pole.r = 255;
-  //           point_pole.g = 241;
-  //           point_pole.b = 0;
-  //           //cloud_use->push_back(point_pole);
-  //           cloud_pole->push_back(point_pole);
-  //           pole_random_nums.push_back(pole_pc_num);
-  //           pole_pc_num++;
-  //         }
-  //       }
-  //     }
-  //     else if (d==2){
-  //       Eigen::Matrix3f& eigen_vectors = pca.getEigenVectors();
-  //       const Eigen::Vector3f eigenvector_3= eigen_vectors.col(2); //third eigen vector
-
-  //       const Eigen::Vector3f z_axis(0, 0, 1);      
-  //       float angle_N_rad = std::acos(eigenvector_3.dot(z_axis));//normal_axis
-  //       float angle_N_deg = angle_N_rad*(180.0/M_PI);
-
-  //       if ((75<angle_N_deg) && (angle_N_deg<105)){
-  //         for (size_t i = 0; i<cloud_surr_1search->size();i++){
-  //           pcl::PointXYZRGB point_wall;
-  //           point_wall.x = cloud_surr_1search->points[i].x;
-  //           point_wall.y = cloud_surr_1search->points[i].y;
-  //           point_wall.z = cloud_surr_1search->points[i].z;
-  //           point_wall.r = 207;
-  //           point_wall.g = 249;
-  //           point_wall.b = 255;
-  //           //cloud_use->push_back(point_wall);
-  //           cloud_wall->push_back(point_wall);
-  //           wall_random_nums.push_back(wall_pc_num);
-  //           wall_pc_num++;
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-  
-  // // Merge cloud_pole and ground_cloud_ptr
-  // //merged_cloud_ptr = merge_two_pc(cloud_use, ground_cloud_ptr);
-
-  // pcl::PassThrough<pcl::PointXYZ> pass_x;
-  // pass_x.setInputCloud (ground_cloud_ptr);
-  // pass_x.setFilterFieldName ("x");
-  // pass_x.setFilterLimits (-125,125);
-  // pass_x.filter(*ground_cloud_ptr);
-  // pcl::PassThrough<pcl::PointXYZ> pass_y;
-  // pass_y.setInputCloud (ground_cloud_ptr);
-  // pass_y.setFilterFieldName ("y");
-  // pass_y.setFilterLimits (-75,75);
-  // pass_y.filter(*ground_cloud_ptr);
-
-  // for(std::size_t i = 0;i<ground_cloud_ptr->size() ;i++){
-  //   ground_random_nums.push_back(ground_pc_num);
-  //   pcl::PointXYZRGB point_ground;
-  //   point_ground.x = ground_cloud_ptr->points[i].x;
-  //   point_ground.y = ground_cloud_ptr->points[i].y;
-  //   point_ground.z = ground_cloud_ptr->points[i].z;
-  //   point_ground.r = 0;
-  //   point_ground.g = 100;
-  //   point_ground.b = 255;
-  //   cloud_ground->push_back(point_ground);
-  //   ground_pc_num++;
-  // }
-  
-
-  // std::random_device seed_gen;
-  // std::mt19937 engine(seed_gen());
-  // std::shuffle(pole_random_nums.begin(), pole_random_nums.end(), engine);
-  // std::shuffle(wall_random_nums.begin(), wall_random_nums.end(), engine);
-  // std::shuffle(ground_random_nums.begin(), ground_random_nums.end(), engine);
-
-  // int cnt_pole,cnt_ground,cnt_wall;
-  // const int pole_size = 500;
-  // const int ground_size = 200;
-  // const int wall_size = 800;
-
-  // if(pole_random_nums.size()<pole_size){cnt_pole = pole_random_nums.size();}
-  // else{cnt_pole=pole_size;}
-  // for(int i = 0; i<cnt_pole;i++){
-  //   cloud_use->push_back(cloud_pole->points[pole_random_nums[i]]);
-  // }
-  // if(ground_random_nums.size()<ground_size){cnt_ground = ground_random_nums.size();}
-  // else{cnt_ground=ground_size;}
-  // for(int i = 0; i<cnt_ground;i++){
-  //   cloud_use->push_back(cloud_ground->points[ground_random_nums[i]]);
-  // }
-  // if(wall_random_nums.size()<wall_size){cnt_wall = wall_random_nums.size();}
-  // else{cnt_wall=wall_size;}
-  // for(int i = 0; i<cnt_wall;i++){
-  //   cloud_use->push_back(cloud_wall->points[wall_random_nums[i]]);
-  // }
-
-  // auto merged_cloud_msg_ptr = std::make_shared<PointCloud2>();
-  // pcl::toROSMsg(*merged_cloud_ptr, *merged_cloud_msg_ptr);
-  // merged_cloud_msg_ptr->header = input->header;
-  // output = *merged_cloud_msg_ptr;
-
-   auto final_cloud_msg_ptr = std::make_shared<PointCloud2>();
-  pcl::toROSMsg(*no_ground_cloud_ptr, *final_cloud_msg_ptr); //cloud_use
+  std::vector<PointCloudRefVector> radial_ordered_points;
+  //zのfilterの追加
+  if(elevation_grid_mode_){
+    convertPointcloudGridScan(no_ground_cloud_ptr,radial_ordered_points);
+    judgeVegetation(radial_ordered_points,ground_cloud_ptr);
+  }
+  else {
+    convertPointcloud(no_ground_cloud_ptr, radial_ordered_points);
+    judgeVegetation(radial_ordered_points,ground_cloud_ptr);
+  }
+  auto final_cloud_msg_ptr = std::make_shared<PointCloud2>();
+  pcl::toROSMsg(*ground_cloud_ptr, *final_cloud_msg_ptr); //cloud_use
   final_cloud_msg_ptr->header = input->header;
   output = *final_cloud_msg_ptr;
 
