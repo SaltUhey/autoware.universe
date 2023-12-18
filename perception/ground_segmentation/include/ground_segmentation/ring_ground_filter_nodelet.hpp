@@ -210,6 +210,9 @@ private:
   void convertPointcloudGridScan(
     const pcl::PointCloud<pcl::PointXYZ>::Ptr in_cloud,
     std::vector<PointCloudRefVector> & out_radial_ordered_points_manager);
+  void convertPointcloudGridScanCustom(
+    const pcl::PointCloud<pcl::PointXYZ>::Ptr in_cloud,
+    std::vector<PointCloudRefVector> & out_radial_ordered_points_manager);
   /*!
    * Output ground center of front wheels as the virtual ground point
    * @param[out] point Virtual ground origin point
