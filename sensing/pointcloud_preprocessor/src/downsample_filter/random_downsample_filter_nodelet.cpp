@@ -64,12 +64,24 @@ RandomDownsampleFilterComponent::RandomDownsampleFilterComponent(
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
     std::bind(&RandomDownsampleFilterComponent::paramCallback, this, _1));
+
+  // initialize debug tool
+  {
+    //using tier4_autoware_utils::DebugPublisher;
+    using tier4_autoware_utils::StopWatch;
+    stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
+    //debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, "downsample_grod_filter");
+    stop_watch_ptr_->tic("cyclic_time");
+    stop_watch_ptr_->tic("processing_time");
+  }
 }
 
 void RandomDownsampleFilterComponent::filter(
   const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output)
 {
   std::scoped_lock lock(mutex_);
+  stop_watch_ptr_->toc("processing_time", true);
+  
   if (indices) {
     RCLCPP_WARN(get_logger(), "Indices are not supported and will be ignored");
   }
@@ -85,6 +97,13 @@ void RandomDownsampleFilterComponent::filter(
 
   pcl::toROSMsg(*pcl_output, output);
   output.header = input->header;
+
+  if (stop_watch_ptr_) {
+    const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+    const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+    std::cerr<<"processing_time_ms(random_downsample_filter):"<< processing_time_ms <<std::endl;
+    std::cerr<<"cyclic_time_ms(random_downsample_filter):"<< cyclic_time_ms <<std::endl;
+  }
 }
 
 rcl_interfaces::msg::SetParametersResult RandomDownsampleFilterComponent::paramCallback(

@@ -56,6 +56,8 @@
 #include <pcl/search/kdtree.h>
 #include <pcl/segmentation/segment_differences.h>
 
+#include "pointcloud_preprocessor/filter.hpp"
+
 #include <vector>
 
 namespace pointcloud_preprocessor
@@ -74,6 +76,17 @@ VoxelGridDownsampleFilterComponent::VoxelGridDownsampleFilterComponent(
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
     std::bind(&VoxelGridDownsampleFilterComponent::paramCallback, this, _1));
+
+  // initialize debug tool
+  {
+    using tier4_autoware_utils::DebugPublisher;
+    using tier4_autoware_utils::StopWatch;
+    stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
+    debug_publisher_ = std::make_unique<DebugPublisher>(this, "downsample_ground_filter");
+    stop_watch_ptr_->tic("cyclic_time");
+    stop_watch_ptr_->tic("processing_time");
+  }
+  
 }
 
 // TODO(atsushi421): Temporary Implementation: Delete this function definition when all the filter
@@ -82,6 +95,8 @@ void VoxelGridDownsampleFilterComponent::filter(
   const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output)
 {
   std::scoped_lock lock(mutex_);
+  std::cerr<<"filter:"<<std::endl;
+
   if (indices) {
     RCLCPP_WARN(get_logger(), "Indices are not supported and will be ignored");
   }
@@ -97,6 +112,7 @@ void VoxelGridDownsampleFilterComponent::filter(
 
   pcl::toROSMsg(*pcl_output, output);
   output.header = input->header;
+
 }
 
 // TODO(atsushi421): Temporary Implementation: Rename this function to `filter()` when all the
@@ -106,10 +122,26 @@ void VoxelGridDownsampleFilterComponent::faster_filter(
   PointCloud2 & output, const TransformInfo & transform_info)
 {
   std::scoped_lock lock(mutex_);
+  stop_watch_ptr_->toc("processing_time", true);
+  std::cerr<<"fast_filter:"<<std::endl;
+
   FasterVoxelGridDownsampleFilter faster_voxel_filter;
   faster_voxel_filter.set_voxel_size(voxel_size_x_, voxel_size_y_, voxel_size_z_);
   faster_voxel_filter.set_field_offsets(input);
   faster_voxel_filter.filter(input, output, transform_info, this->get_logger());
+
+  if (debug_publisher_ && stop_watch_ptr_) {
+    const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+    const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+    std::cerr<<"processing_time_ms(voxel_grid_downsample_filter):"<< processing_time_ms <<std::endl;
+    std::cerr<<"cyclic_time_ms(voxel_grid_downsample_filter):"<< cyclic_time_ms <<std::endl;
+
+    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+      "debug/cyclic_time_ms", cyclic_time_ms);
+    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+      "debug/processing_time_ms", processing_time_ms);
+  }
+
 }
 
 rcl_interfaces::msg::SetParametersResult VoxelGridDownsampleFilterComponent::paramCallback(
@@ -130,6 +162,8 @@ rcl_interfaces::msg::SetParametersResult VoxelGridDownsampleFilterComponent::par
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   result.reason = "success";
+  
+  
 
   return result;
 }

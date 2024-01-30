@@ -89,7 +89,9 @@ def launch_setup(context, *args, **kwargs):
             ],
             parameters=[
                 {
-                    "variance_judge_vegetation": 0.01,
+                    "variance_judge_vegetation": 0.01, # 0.05
+                    "grid_mode_switch_radius": 20.0, #20.0
+                    "radial_divider_angle_deg": 2.0, #4.0
                 },
                 vehicle_info_param,
             ],

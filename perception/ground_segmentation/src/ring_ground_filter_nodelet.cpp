@@ -53,7 +53,7 @@ RingGroundFilterComponent::RingGroundFilterComponent(const rclcpp::NodeOptions &
     grid_mode_switch_radius_ =
       static_cast<float>(declare_parameter("grid_mode_switch_radius", 20.0));
 
-    grid_size_m_ = static_cast<float>(declare_parameter("grid_size_m", 0.5));
+    grid_size_m_ = static_cast<float>(declare_parameter("grid_size_m", 0.5));//0.5 (20240115)
     gnd_grid_buffer_size_ = static_cast<int>(declare_parameter("gnd_grid_buffer_size", 4));
     elevation_grid_mode_ = static_cast<bool>(declare_parameter("elevation_grid_mode", true));
     global_slope_max_angle_rad_ = deg2rad(declare_parameter("global_slope_max_angle_deg", 8.0));
@@ -98,9 +98,11 @@ void RingGroundFilterComponent::convertPointcloudGridScanCustom(
   grid_size_rad_ =
     normalizeRadian(std::atan2(grid_mode_switch_radius_ + grid_size_m_, virtual_lidar_z_)) -
     normalizeRadian(std::atan2(grid_mode_switch_radius_, virtual_lidar_z_));
+    std::cerr<<"grid_size_rad_:"<<grid_size_rad_<<std::endl;//20240115
   for (size_t i = 0; i < in_cloud->points.size(); ++i) {
+    //20240110
     auto x{
-      in_cloud->points[i].x - //20231218
+      in_cloud->points[i].x - vehicle_info_.wheel_base_m / 2.0f -
       center_pcl_shift_};  // base on front wheel center
     // auto y{in_cloud->points[i].y};
     auto radius{static_cast<float>(std::hypot(x, in_cloud->points[i].y))};
@@ -482,12 +484,13 @@ void RingGroundFilterComponent::judgeVegetation(
   std::vector<PointCloudRefVector> & in_radial_ordered_clouds,
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr & out_cloud)
 {
-  //std::cerr<<"variance_judge_vegetation_:"<<variance_judge_vegetation_<<std::endl;
+  std::cerr<<"variance_judge_vegetation_:"<<variance_judge_vegetation_<<std::endl;
   //out_cloud->clear();
   for (size_t i = 0; i < in_radial_ordered_clouds.size(); ++i) {
     std::vector<float> r_data;
+    //const int skip=4;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_1grid(new pcl::PointCloud<pcl::PointXYZ>);
-    for (size_t j = 0; j < in_radial_ordered_clouds[i].size(); ++j) {
+    for (size_t j = 0; j < in_radial_ordered_clouds[i].size(); j++) {
       auto * p = &in_radial_ordered_clouds[i][j];
       
       r_data.push_back(p->radius);
@@ -498,25 +501,47 @@ void RingGroundFilterComponent::judgeVegetation(
     // Judge 1grid frame
     float sum = 0.0;
     float variance = 0.0;
-    for(size_t i = 0; i < r_data.size(); i++) {
-        sum += r_data[i];
+    for(size_t p = 0; p < r_data.size(); p++) {
+        sum += r_data[p];
     }
 
     const float mean = sum / r_data.size();
-    for(size_t i = 0; i < r_data.size(); i++) {
-        variance += pow(r_data[i] - mean, 2);
+    for(size_t n = 0; n < r_data.size(); n++) {
+        variance += pow(r_data[n] - mean, 2);
     }
     variance /= r_data.size();//分散
     //std::cerr<<"variance:"<<variance<<std::endl;
     if(variance < variance_judge_vegetation_){
-      for(size_t i =0; i<cloud_1grid->size(); i++){
+      for(size_t m =0; m<cloud_1grid->size(); m++){
         pcl::PointXYZRGB point;
-        point.x = cloud_1grid->points[i].x;
-        point.y = cloud_1grid->points[i].y;
-        point.z = cloud_1grid->points[i].z;
+        point.x = cloud_1grid->points[m].x;
+        point.y = cloud_1grid->points[m].y;
+        point.z = cloud_1grid->points[m].z;
+        // if(i%4==1){
+        //   point.r = 255;
+        //   point.g = 100;
+        //   point.b = 100;
+        // }
+        // else if(i%4==2){
+        //   point.r = 100;
+        //   point.g = 255;
+        //   point.b = 100;
+        // }
+        // else if(i%4==3){
+        //   point.r = 100;
+        //   point.g = 100;
+        //   point.b = 255;
+        // }
+        // else if(i%4==0){
+        //   point.r = 255;
+        //   point.g = 255;
+        //   point.b = 255;
+        // }
+        
         point.r = 24;
         point.g = 235;
         point.b = 249;
+        
         out_cloud->push_back(point);
       }
     }
@@ -914,8 +939,9 @@ void RingGroundFilterComponent::convertPointcloudRingVector(
   const pcl::PointCloud<PointXYZIRADRT>::Ptr in_cloud_ptr, std::vector<OneRing> &cloud_each_ring)
 {
   const int ring_total = 128;
+  //const int skip = 2; //20240130,i += skip
   cloud_each_ring.resize(ring_total) ;
-  for (std::size_t i = 0; i < in_cloud_ptr->size(); i++) {
+  for (std::size_t i = 0; i < in_cloud_ptr->size(); i ++) {
     OneRing one_ring;
     pcl::PointXYZ point;
     point.x = in_cloud_ptr->points[i].x;
@@ -925,9 +951,9 @@ void RingGroundFilterComponent::convertPointcloudRingVector(
     if (cloud_each_ring[ring_num].cloud == nullptr) {
       cloud_each_ring[ring_num].cloud = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
     }
-    if(in_cloud_ptr->points[i].z < 1.5){
+    //if(in_cloud_ptr->points[i].z < 1.5){
     cloud_each_ring[ring_num].cloud->push_back(point);
-    }
+    //}
   }
   for (std::size_t i = 0; i < cloud_each_ring.size(); i++) {
     int ring_num = i+1;
@@ -982,7 +1008,8 @@ void RingGroundFilterComponent::filter(
   std::vector<OneRing> cloud_each_ring;
   convertPointcloudRingVector(current_sensor_cloud_ptr,cloud_each_ring);//z軸の切り捨ての考慮もここでしている
 
-  for(size_t n =0; n<cloud_each_ring.size();n++){
+  //const int ring_skip = 2;//n += ring_skip
+  for(size_t n =0; n<cloud_each_ring.size(); n++){
 
     if (cloud_each_ring[n].cloud != nullptr) {
       //std::cerr<<"ring"<< n <<"の点群数:"<<cloud_each_ring[n].cloud->size()<<std::endl;
@@ -1001,7 +1028,7 @@ void RingGroundFilterComponent::filter(
   }
 
   //ds
-  //std::cerr<<"点群数(ds前):"<<ground_cloud_ptr->size()<<std::endl;
+  std::cerr<<"点群数(ds前):"<<ground_cloud_ptr->size()<<std::endl;
   pcl::VoxelGrid<pcl::PointXYZRGB> vg;
   vg.setInputCloud(ground_cloud_ptr);
   vg.setLeafSize(1.5f, 1.5f, 1.5f);
@@ -1030,7 +1057,7 @@ void RingGroundFilterComponent::filter(
   std::cerr<<"最終的な点群数:"<<final_cloud_ptr->size()<<std::endl;
   
   auto final_cloud_msg_ptr = std::make_shared<PointCloud2>();
-  pcl::toROSMsg(*final_cloud_ptr, *final_cloud_msg_ptr);
+  pcl::toROSMsg(*final_cloud_ptr, *final_cloud_msg_ptr);//final_cloud_ptr,ground_cloud_ptr
   final_cloud_msg_ptr->header = input->header;
   output = *final_cloud_msg_ptr;
 

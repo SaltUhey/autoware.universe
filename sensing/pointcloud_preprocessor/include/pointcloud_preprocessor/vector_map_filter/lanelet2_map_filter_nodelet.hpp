@@ -40,6 +40,8 @@
 #include <string>
 #include <vector>
 
+#include "tier4_autoware_utils/tier4_autoware_utils.hpp"
+
 using tier4_autoware_utils::LinearRing2d;
 using tier4_autoware_utils::MultiPoint2d;
 using tier4_autoware_utils::Point2d;
@@ -93,6 +95,10 @@ private:
 
   /** \brief Parameter service callback */
   rcl_interfaces::msg::SetParametersResult paramCallback(const std::vector<rclcpp::Parameter> & p);
+
+  // debugger
+  std::unique_ptr<tier4_autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{
+    nullptr};
 };
 
 }  // namespace pointcloud_preprocessor
