@@ -245,7 +245,7 @@ private:
   void classifyGroundPointCloudGridScan(
     std::vector<PointCloudRefVector> & in_radial_ordered_clouds,
     pcl::PointIndices & out_ground_indices);
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr merge_two_pc(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc1, pcl::PointCloud<pcl::PointXYZ>::Ptr pc2); //20231127
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr merge_two_pc(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc1, pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc2); //20231127
   void judgeVegetation(
     std::vector<PointCloudRefVector> & in_radial_ordered_clouds,
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr & cloud);
@@ -273,6 +273,9 @@ private:
 
   void convertPointcloudRingVector(
     const pcl::PointCloud<PointXYZIRADRT>::Ptr in_cloud_ptr, std::vector<OneRing> & cloud_each_ring);
+
+  void convertPointcloudRingVectorAndOthers(
+    const pcl::PointCloud<PointXYZIRADRT>::Ptr in_cloud_ptr, std::vector<OneRing> &cloud_each_ring, pcl::PointCloud<pcl::PointXYZRGB>::Ptr &others_cloud_ptr);
 
   /** \brief Parameter service callback result : needed to be hold */
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
