@@ -128,6 +128,18 @@ private:
   std::array<double, 36> estimate_covariance(
     const pclomp::NdtResult & ndt_result, const Eigen::Matrix4f & initial_pose_matrix,
     const rclcpp::Time & sensor_ros_time);
+  std::array<double, 36> estimate_covariance_laplace(const pclomp::NdtResult & ndt_result, const rclcpp::Time & sensor_ros_time);
+  std::array<double, 36> estimate_covariance_multi_ndt(
+    const pclomp::NdtResult & ndt_result,
+    std::shared_ptr<pclomp::MultiGridNormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ>> ndt_ptr,
+    const std::vector<Eigen::Matrix4f>& poses_to_search,
+    const rclcpp::Time & sensor_ros_time);
+  std::array<double, 36> estimate_covariance_multi_ndt_score(
+    const pclomp::NdtResult & ndt_result,
+    std::shared_ptr<pclomp::MultiGridNormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ>> ndt_ptr,
+    const std::vector<Eigen::Matrix4f>& poses_to_search,
+    const double temperature,
+    const rclcpp::Time & sensor_ros_time);
 
   void add_regularization_pose(const rclcpp::Time & sensor_ros_time);
 
@@ -169,6 +181,9 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
     ndt_monte_carlo_initial_pose_marker_pub_;
   rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagnostics_pub_;
+
+  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr ndt_cov_x_pub_;//oshikubo
+  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr ndt_cov_y_pub_;//oshikubo
 
   rclcpp::Service<tier4_localization_msgs::srv::PoseWithCovarianceStamped>::SharedPtr service_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr service_trigger_node_;

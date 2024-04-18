@@ -90,6 +90,8 @@ EKFLocalizer::EKFLocalizer(const std::string & node_name, const rclcpp::NodeOpti
       &EKFLocalizer::serviceTriggerNode, this, std::placeholders::_1, std::placeholders::_2),
     rclcpp::ServicesQoS().get_rmw_qos_profile());
 
+  ekf_updated_distance_pub_ = create_publisher<tier4_debug_msgs::msg::Float64Stamped>("ekf_updated_distance", 1);//oshikubo
+
   tf_br_ = std::make_shared<tf2_ros::TransformBroadcaster>(
     std::shared_ptr<rclcpp::Node>(this, [](auto) {}));
 
@@ -173,6 +175,14 @@ void EKFLocalizer::timerCallback()
   bool pose_is_updated = false;
 
   if (!pose_queue_.empty()) {
+
+    //debug oshikubo
+    const double z_before_ndt_update = z_filter_.get_x();
+    const double roll_before_ndt_update = roll_filter_.get_x();
+    const double pitch_before_ndt_update = pitch_filter_.get_x();
+    current_ekf_pose_before_ndt_update_ =
+    ekf_module_->getCurrentPose(current_time, z_before_ndt_update, roll_before_ndt_update, pitch_before_ndt_update, false);
+
     DEBUG_INFO(get_logger(), "------------------------- start Pose -------------------------");
     stop_watch_.tic();
 
@@ -194,6 +204,35 @@ void EKFLocalizer::timerCallback()
     }
     DEBUG_INFO(get_logger(), "[EKF] measurementUpdatePose calc time = %f [ms]", stop_watch_.toc());
     DEBUG_INFO(get_logger(), "------------------------- end Pose -------------------------\n");
+
+    //debug oshikubo
+    const double z_after_ndt_update = z_filter_.get_x();
+    const double roll_after_ndt_update = roll_filter_.get_x();
+    const double pitch_after_ndt_update = pitch_filter_.get_x();
+    // std::cerr << "z_before_ndt_update:" <<z_before_ndt_update <<std::endl;
+    // std::cerr << "z_after_ndt_update:" <<z_after_ndt_update <<std::endl;
+    // std::cerr << "roll_before_ndt_update:" <<roll_before_ndt_update <<std::endl;
+    // std::cerr << "roll_after_ndt_update:" <<roll_after_ndt_update <<std::endl;
+    // std::cerr << "pitch_before_ndt_update:" <<pitch_before_ndt_update <<std::endl;
+    // std::cerr << "pitch_after_ndt_update:" <<pitch_after_ndt_update <<std::endl;
+
+    current_ekf_pose_after_ndt_update_ =
+    ekf_module_->getCurrentPose(current_time, z_after_ndt_update, roll_after_ndt_update, pitch_after_ndt_update, false);
+
+    //if(receive_ndt_immediately_){
+      const geometry_msgs::msg::Point p1 = current_ekf_pose_before_ndt_update_.pose.position;
+      const geometry_msgs::msg::Point p2 = current_ekf_pose_after_ndt_update_.pose.position;
+      const double dx = p1.x - p2.x;
+      const double dy = p1.y - p2.y;
+      const double dz = p1.z - p2.z;
+
+      tier4_debug_msgs::msg::Float64Stamped ekf_updated_distance;
+      ekf_updated_distance.stamp = current_time;
+      ekf_updated_distance.data =  static_cast<float>(std::sqrt(dx * dx + dy * dy + dz * dz));
+      ekf_updated_distance_pub_->publish(ekf_updated_distance);
+      receive_ndt_immediately_ = false;
+    //}
+
   }
   pose_diag_info_.no_update_count = pose_is_updated ? 0 : (pose_diag_info_.no_update_count + 1);
 
@@ -320,6 +359,7 @@ void EKFLocalizer::callbackPoseWithCovariance(
   }
 
   pose_queue_.push(msg);
+  receive_ndt_immediately_ = true;//oshikbuo
 }
 
 /*

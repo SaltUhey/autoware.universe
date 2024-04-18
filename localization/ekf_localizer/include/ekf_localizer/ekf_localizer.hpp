@@ -171,6 +171,12 @@ private:
   AgedObjectQueue<geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr> pose_queue_;
   AgedObjectQueue<geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr> twist_queue_;
 
+  //debug oshikubo
+  bool receive_ndt_immediately_ = false;
+  rclcpp::Publisher<tier4_debug_msgs::msg::Float64Stamped>::SharedPtr ekf_updated_distance_pub_;
+  geometry_msgs::msg::PoseStamped current_ekf_pose_before_ndt_update_;
+  geometry_msgs::msg::PoseStamped current_ekf_pose_after_ndt_update_;
+
   /**
    * @brief computes update & prediction of EKF for each ekf_dt_[s] time
    */
