@@ -454,9 +454,9 @@ void NDTScanMatcher::callback_sensor_points(
     //   estimate_covariance(ndt_result, initial_pose_matrix, sensor_ros_time);
     
     //laplace------------↓↓↓↓↓↓↓↓↓↓↓
-    // std::cerr << "laplace" << std::endl;
-    // const auto estimated_covariance_laplace = estimate_covariance_laplace(ndt_result);
-    // ndt_covariance = estimated_covariance_laplace;
+    std::cerr << "laplace" << std::endl;
+    const auto estimated_covariance_laplace = estimate_covariance_laplace(ndt_result, sensor_ros_time);
+    ndt_covariance = estimated_covariance_laplace;
     //-------------------↑↑↑↑↑↑↑↑↑↑↑
 
     //estimate_xy_covariance_by_multi_ndt-------↓↓↓↓↓↓↓↓↓↓↓
@@ -469,13 +469,13 @@ void NDTScanMatcher::callback_sensor_points(
     //------------------------------------------↑↑↑↑↑↑↑↑↑↑↑
 
     //estimate_xy_covariance_by_multi_ndt_score-------↓↓↓↓↓↓↓↓↓↓↓
-    std::cerr << "multi_ndt_score" << std::endl;
-    const std::vector<double> offset_x = {0.0, 0.0, 0.5, -0.5, 1.0, -1.0, 0.0, 0.0, 2.0, -2.0};
-    const std::vector<double> offset_y = {0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0};
-    const double temperature = 0.1;
-    const std::vector<Eigen::Matrix4f> poses_to_search = pclomp::propose_poses_to_search(ndt_result, offset_x, offset_y);
-    const auto estimated_covariance_multi_ndt_score = estimate_covariance_multi_ndt_score(ndt_result, ndt_ptr_, poses_to_search, temperature, sensor_ros_time);
-    ndt_covariance = estimated_covariance_multi_ndt_score;
+    // std::cerr << "multi_ndt_score" << std::endl;
+    // const std::vector<double> offset_x = {0.0, 0.0, 0.5, -0.5, 1.0, -1.0, 0.0, 0.0, 2.0, -2.0};
+    // const std::vector<double> offset_y = {0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0};
+    // const double temperature = 0.1;
+    // const std::vector<Eigen::Matrix4f> poses_to_search = pclomp::propose_poses_to_search(ndt_result, offset_x, offset_y);
+    // const auto estimated_covariance_multi_ndt_score = estimate_covariance_multi_ndt_score(ndt_result, ndt_ptr_, poses_to_search, temperature, sensor_ros_time);
+    // ndt_covariance = estimated_covariance_multi_ndt_score;
     //------------------------------------------------↑↑↑↑↑↑↑↑↑↑↑
 
     //ndt_covariance = estimated_covariance;
