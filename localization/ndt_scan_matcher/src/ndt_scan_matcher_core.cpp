@@ -995,9 +995,9 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance_multi_ndt_score(
   marker.pose.position.y = ndt_result.pose(1,3);
   marker.pose.position.z = ndt_result.pose(2,3);
   marker.pose.orientation = quaternion;
-  marker.scale.x = cov_scale*cov_by_mndt_score_rotated(0, 0);
-  marker.scale.y = cov_scale*cov_by_mndt_score_rotated(1, 1);
-  marker.scale.z = cov_scale*ndt_covariance[14];
+  marker.scale.x = cov_scale*std::sqrt(cov_by_mndt_score_rotated(0, 0));
+  marker.scale.y = cov_scale*std::sqrt(cov_by_mndt_score_rotated(1, 1));
+  marker.scale.z = cov_scale*std::sqrt(ndt_covariance[14]);
   marker.color.r = 1.0;
   marker.color.g = 0.0;
   marker.color.b = 1.0;

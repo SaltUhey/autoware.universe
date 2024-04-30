@@ -185,7 +185,7 @@ private:
   rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr ndt_cov_x_pub_;//oshikubo
   rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr ndt_cov_y_pub_;//oshikubo
   int id_=0;
-  const int cov_scale = 10;
+  const int cov_scale = 2;
   visualization_msgs::msg::MarkerArray ndt_cov_marker_array;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr ndt_cov_marker_pub_;
 
