@@ -182,12 +182,12 @@ private:
     ndt_monte_carlo_initial_pose_marker_pub_;
   rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagnostics_pub_;
 
-  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr ndt_cov_x_pub_;//oshikubo
-  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr ndt_cov_y_pub_;//oshikubo
+  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr ndt_dev_x_pub_;//oshikubo
+  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr ndt_dev_y_pub_;//oshikubo
   int id_=0;
-  const int cov_scale = 1;
-  visualization_msgs::msg::MarkerArray ndt_cov_marker_array;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr ndt_cov_marker_pub_;
+  const int cov_scale_ = 3;
+  visualization_msgs::msg::MarkerArray ndt_dev_marker_array;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr ndt_dev_marker_pub_;
 
   rclcpp::Service<tier4_localization_msgs::srv::PoseWithCovarianceStamped>::SharedPtr service_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr service_trigger_node_;
