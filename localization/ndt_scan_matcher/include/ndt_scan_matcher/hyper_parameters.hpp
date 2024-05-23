@@ -79,6 +79,8 @@ struct HyperParameters
     {
       bool enable;
       std::vector<Eigen::Vector2d> initial_pose_offset_model;
+      std::vector<double> initial_pose_offset_model_x;
+      std::vector<double> initial_pose_offset_model_y;
     } covariance_estimation;
   } covariance;
 
@@ -145,21 +147,21 @@ public:
     covariance.covariance_estimation.enable =
       node->declare_parameter<bool>("covariance.covariance_estimation.enable");
     if (covariance.covariance_estimation.enable) {
-      std::vector<double> initial_pose_offset_model_x =
+      covariance.covariance_estimation.initial_pose_offset_model_x =
         node->declare_parameter<std::vector<double>>(
           "covariance.covariance_estimation.initial_pose_offset_model_x");
-      std::vector<double> initial_pose_offset_model_y =
+      covariance.covariance_estimation.initial_pose_offset_model_y =
         node->declare_parameter<std::vector<double>>(
           "covariance.covariance_estimation.initial_pose_offset_model_y");
 
-      if (initial_pose_offset_model_x.size() == initial_pose_offset_model_y.size()) {
-        const size_t size = initial_pose_offset_model_x.size();
+      if (covariance.covariance_estimation.initial_pose_offset_model_x.size() == covariance.covariance_estimation.initial_pose_offset_model_y.size()) {
+        const size_t size = covariance.covariance_estimation.initial_pose_offset_model_x.size();
         covariance.covariance_estimation.initial_pose_offset_model.resize(size);
         for (size_t i = 0; i < size; i++) {
           covariance.covariance_estimation.initial_pose_offset_model[i].x() =
-            initial_pose_offset_model_x[i];
+            covariance.covariance_estimation.initial_pose_offset_model_x[i];
           covariance.covariance_estimation.initial_pose_offset_model[i].y() =
-            initial_pose_offset_model_y[i];
+            covariance.covariance_estimation.initial_pose_offset_model_y[i];
         }
       } else {
         RCLCPP_WARN(
