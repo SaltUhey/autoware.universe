@@ -140,6 +140,7 @@ private:
     const std::vector<Eigen::Matrix4f>& poses_to_search,
     const double temperature,
     const rclcpp::Time & sensor_ros_time);
+  void debug_covariance_estimation(const Eigen::Matrix2d& cov_map, const Eigen::Matrix4f& pose, std::array<double, 36>& ndt_covariance, const rclcpp::Time & sensor_ros_time);
 
   void add_regularization_pose(const rclcpp::Time & sensor_ros_time);
 

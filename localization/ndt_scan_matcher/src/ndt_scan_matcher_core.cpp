@@ -853,43 +853,9 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance_laplace(const pclomp:
   ndt_covariance[1 + 6 * 0] = cov_by_la_adjust(1, 0);
   ndt_covariance[0 + 6 * 1] = cov_by_la_adjust(0, 1);
 
-  //publish covariance at base_link
-  const Eigen::Matrix2d cov_by_la_rotated = pclomp::rotate_covariance_to_base_link(cov_by_la_adjust, ndt_result.pose);
-  const double dev_x_by_laplace_rotated = std::sqrt(cov_by_la_rotated(0,0));
-  const double dev_y_by_laplace_rotated = std::sqrt(cov_by_la_rotated(1,1));
-  ndt_dev_x_pub_->publish(
-    make_float32_stamped(sensor_ros_time, dev_x_by_laplace_rotated));
-  ndt_dev_y_pub_->publish(
-    make_float32_stamped(sensor_ros_time, dev_y_by_laplace_rotated));
-  
-  //display ndt cov markers
-  const Eigen::Matrix2d rot = ndt_result.pose.topLeftCorner<2, 2>().cast<double>();
-  double yaw = std::atan2(rot(1, 0), rot(0, 0));
-  geometry_msgs::msg::Quaternion quaternion;
-  tf2::Quaternion tf_quaternion;
-  tf_quaternion.setRPY(0, 0, yaw);
-  tf2::convert(tf_quaternion, quaternion);
-  visualization_msgs::msg::Marker marker;
-  marker.header.frame_id = param_.frame.map_frame;
-  marker.header.stamp = sensor_ros_time;
-  marker.ns = "sphepe";
-  marker.id = id_++;
-  marker.type = visualization_msgs::msg::Marker::SPHERE;
-  marker.action = visualization_msgs::msg::Marker::ADD;
-  marker.pose.position.x = ndt_result.pose(0,3);
-  marker.pose.position.y = ndt_result.pose(1,3);
-  marker.pose.position.z = ndt_result.pose(2,3);
-  marker.pose.orientation = quaternion;
-  marker.scale.x = cov_scale_*2*dev_x_by_laplace_rotated;
-  marker.scale.y = cov_scale_*2*dev_y_by_laplace_rotated;
-  marker.scale.z = cov_scale_*2*std::sqrt(ndt_covariance[14]);
-  marker.color.r = 1.0;
-  marker.color.g = 0.0;
-  marker.color.b = 1.0;
-  marker.color.a = 0.4;
-  marker.lifetime = rclcpp::Duration::from_seconds(30.0);
-  ndt_dev_marker_array.markers.push_back(marker);
-  ndt_dev_marker_pub_->publish(ndt_dev_marker_array);
+  if(param_.covariance.covariance_estimation.debug_enable){
+    debug_covariance_estimation(cov_by_la_adjust, ndt_result.pose, ndt_covariance, sensor_ros_time);
+  }
 
   return ndt_covariance;
 }
@@ -898,7 +864,6 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance_multi_ndt(
   const pclomp::NdtResult & ndt_result, std::shared_ptr<pclomp::MultiGridNormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ>> ndt_ptr, const std::vector<Eigen::Matrix4f>& poses_to_search , const rclcpp::Time & sensor_ros_time)
 {
   std::array<double, 36> ndt_covariance = param_.covariance.output_pose_covariance;
-
   const pclomp::ResultOfMultiNdtCovarianceEstimation  result_of_multi_ndt_covariance_estimation = estimate_xy_covariance_by_multi_ndt(ndt_result, ndt_ptr, poses_to_search);
   const Eigen::Matrix2d cov_by_mndt = pclomp::adjust_diagonal_covariance(result_of_multi_ndt_covariance_estimation.covariance, ndt_result.pose, 0.0225, 0.0225);
 
@@ -907,43 +872,9 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance_multi_ndt(
   ndt_covariance[1 + 6 * 0] = cov_by_mndt(1, 0);
   ndt_covariance[0 + 6 * 1] = cov_by_mndt(0, 1);
 
-  // publish covariance at base_link
-  const Eigen::Matrix2d cov_by_mndt_rotated = pclomp::rotate_covariance_to_base_link(cov_by_mndt, ndt_result.pose);
-  const double dev_x_by_mndt_rotated =std::sqrt(cov_by_mndt_rotated(0, 0));
-  const double dev_y_by_mndt_rotated =std::sqrt(cov_by_mndt_rotated(1, 1));
-  ndt_dev_x_pub_->publish(
-    make_float32_stamped(sensor_ros_time, dev_x_by_mndt_rotated));
-  ndt_dev_y_pub_->publish(
-    make_float32_stamped(sensor_ros_time, dev_y_by_mndt_rotated));
-
-  //display ndt cov markers
-  const Eigen::Matrix2d rot = ndt_result.pose.topLeftCorner<2, 2>().cast<double>();
-  double yaw = std::atan2(rot(1, 0), rot(0, 0));
-  geometry_msgs::msg::Quaternion quaternion;
-  tf2::Quaternion tf_quaternion;
-  tf_quaternion.setRPY(0, 0, yaw);
-  tf2::convert(tf_quaternion, quaternion);
-  visualization_msgs::msg::Marker marker;
-  marker.header.frame_id = param_.frame.map_frame;
-  marker.header.stamp = sensor_ros_time;
-  marker.ns = "sphepe";
-  marker.id = id_++;
-  marker.type = visualization_msgs::msg::Marker::SPHERE;
-  marker.action = visualization_msgs::msg::Marker::ADD;
-  marker.pose.position.x = ndt_result.pose(0,3);
-  marker.pose.position.y = ndt_result.pose(1,3);
-  marker.pose.position.z = ndt_result.pose(2,3);
-  marker.pose.orientation = quaternion;
-  marker.scale.x = cov_scale_*2*dev_x_by_mndt_rotated;
-  marker.scale.y = cov_scale_*2*dev_y_by_mndt_rotated;
-  marker.scale.z = cov_scale_*2*std::sqrt(ndt_covariance[14]);
-  marker.color.r = 1.0;
-  marker.color.g = 0.0;
-  marker.color.b = 1.0;
-  marker.color.a = 0.4;
-  marker.lifetime = rclcpp::Duration::from_seconds(30.0);
-  ndt_dev_marker_array.markers.push_back(marker);
-  ndt_dev_marker_pub_->publish(ndt_dev_marker_array);
+  if(param_.covariance.covariance_estimation.debug_enable){
+    debug_covariance_estimation(cov_by_mndt, ndt_result.pose, ndt_covariance, sensor_ros_time);
+  }
 
   return ndt_covariance;
 }
@@ -952,7 +883,6 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance_multi_ndt_score(
   const pclomp::NdtResult & ndt_result, std::shared_ptr<pclomp::MultiGridNormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ>> ndt_ptr, const std::vector<Eigen::Matrix4f>& poses_to_search, const double temperature, const rclcpp::Time & sensor_ros_time)
 {
   std::array<double, 36> ndt_covariance = param_.covariance.output_pose_covariance;
-
   const pclomp::ResultOfMultiNdtCovarianceEstimation result_of_multi_ndt_score_covariance_estimation = estimate_xy_covariance_by_multi_ndt_score(ndt_result, ndt_ptr, poses_to_search, temperature);
   const Eigen::Matrix2d cov_by_mndt_score = pclomp::adjust_diagonal_covariance(result_of_multi_ndt_score_covariance_estimation.covariance, ndt_result.pose, 0.0225, 0.0225);
 
@@ -961,43 +891,9 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance_multi_ndt_score(
   ndt_covariance[1 + 6 * 0] = cov_by_mndt_score(1, 0);
   ndt_covariance[0 + 6 * 1] = cov_by_mndt_score(0, 1);
 
-  // publish covariance at base_link
-  const Eigen::Matrix2d cov_by_mndt_score_rotated = pclomp::rotate_covariance_to_base_link(cov_by_mndt_score, ndt_result.pose);
-  const double dev_x_by_mndt_score_rotated =std::sqrt(cov_by_mndt_score_rotated(0, 0));
-  const double dev_y_by_mndt_score_rotated =std::sqrt(cov_by_mndt_score_rotated(1, 1));
-  ndt_dev_x_pub_->publish(
-    make_float32_stamped(sensor_ros_time, dev_x_by_mndt_score_rotated));
-  ndt_dev_y_pub_->publish(
-    make_float32_stamped(sensor_ros_time, dev_y_by_mndt_score_rotated));
-
-  //display ndt cov markers
-  const Eigen::Matrix2d rot = ndt_result.pose.topLeftCorner<2, 2>().cast<double>();
-  double yaw = std::atan2(rot(1, 0), rot(0, 0));
-  geometry_msgs::msg::Quaternion quaternion;
-  tf2::Quaternion tf_quaternion;
-  tf_quaternion.setRPY(0, 0, yaw);
-  tf2::convert(tf_quaternion, quaternion);
-  visualization_msgs::msg::Marker marker;
-  marker.header.frame_id = param_.frame.map_frame;
-  marker.header.stamp = sensor_ros_time;
-  marker.ns = "sphepe";
-  marker.id = id_++;
-  marker.type = visualization_msgs::msg::Marker::SPHERE;
-  marker.action = visualization_msgs::msg::Marker::ADD;
-  marker.pose.position.x = ndt_result.pose(0,3);
-  marker.pose.position.y = ndt_result.pose(1,3);
-  marker.pose.position.z = ndt_result.pose(2,3);
-  marker.pose.orientation = quaternion;
-  marker.scale.x = cov_scale_*2*dev_x_by_mndt_score_rotated;
-  marker.scale.y = cov_scale_*2*dev_y_by_mndt_score_rotated;
-  marker.scale.z = cov_scale_*2*std::sqrt(ndt_covariance[14]);
-  marker.color.r = 1.0;
-  marker.color.g = 0.0;
-  marker.color.b = 1.0;
-  marker.color.a = 0.4;
-  marker.lifetime = rclcpp::Duration::from_seconds(30.0);
-  ndt_dev_marker_array.markers.push_back(marker);
-  ndt_dev_marker_pub_->publish(ndt_dev_marker_array);
+  if(param_.covariance.covariance_estimation.debug_enable){
+    debug_covariance_estimation(cov_by_mndt_score, ndt_result.pose, ndt_covariance, sensor_ros_time);
+  }
 
   return ndt_covariance;
 }
@@ -1016,6 +912,46 @@ void NDTScanMatcher::add_regularization_pose(const rclcpp::Time & sensor_ros_tim
   const Eigen::Matrix4f pose = pose_to_matrix4f(interpolation_result.interpolated_pose.pose.pose);
   ndt_ptr_->setRegularizationPose(pose);
   RCLCPP_DEBUG_STREAM(get_logger(), "Regularization pose is set to NDT");
+}
+
+void NDTScanMatcher::debug_covariance_estimation(const Eigen::Matrix2d& cov_map, const Eigen::Matrix4f& ndt_pose, std::array<double, 36>& ndt_covariance, const rclcpp::Time & sensor_ros_time){
+  //publish covariance at base_link
+  const Eigen::Matrix2d cov_by_la_rotated = pclomp::rotate_covariance_to_base_link(cov_map, ndt_pose);
+  const double dev_x_by_rotated = std::sqrt(cov_by_la_rotated(0,0));
+  const double dev_y_by_rotated = std::sqrt(cov_by_la_rotated(1,1));
+  ndt_dev_x_pub_->publish(
+    make_float32_stamped(sensor_ros_time, dev_x_by_rotated));
+  ndt_dev_y_pub_->publish(
+    make_float32_stamped(sensor_ros_time, dev_y_by_rotated));
+  
+  //display ndt cov markers
+  const Eigen::Matrix2d rot = ndt_pose.topLeftCorner<2, 2>().cast<double>();
+  double yaw = std::atan2(rot(1, 0), rot(0, 0));
+  geometry_msgs::msg::Quaternion quaternion;
+  tf2::Quaternion tf_quaternion;
+  tf_quaternion.setRPY(0, 0, yaw);
+  tf2::convert(tf_quaternion, quaternion);
+  visualization_msgs::msg::Marker marker;
+  marker.header.frame_id = param_.frame.map_frame;
+  marker.header.stamp = sensor_ros_time;
+  marker.ns = "sphepe";
+  marker.id = id_++;
+  marker.type = visualization_msgs::msg::Marker::SPHERE;
+  marker.action = visualization_msgs::msg::Marker::ADD;
+  marker.pose.position.x = ndt_pose(0,3);
+  marker.pose.position.y = ndt_pose(1,3);
+  marker.pose.position.z = ndt_pose(2,3);
+  marker.pose.orientation = quaternion;
+  marker.scale.x = cov_scale_*2*dev_x_by_rotated;
+  marker.scale.y = cov_scale_*2*dev_y_by_rotated;
+  marker.scale.z = cov_scale_*2*std::sqrt(ndt_covariance[14]);
+  marker.color.r = 1.0;
+  marker.color.g = 0.0;
+  marker.color.b = 1.0;
+  marker.color.a = 0.4;
+  marker.lifetime = rclcpp::Duration::from_seconds(30.0);
+  ndt_dev_marker_array.markers.push_back(marker);
+  ndt_dev_marker_pub_->publish(ndt_dev_marker_array);
 }
 
 void NDTScanMatcher::service_trigger_node(

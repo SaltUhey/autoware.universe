@@ -85,6 +85,7 @@ struct HyperParameters
     {
       CovarianceEstimationType covariance_estimation_type;
       bool enable;
+      bool debug_enable;
       std::vector<Eigen::Vector2d> initial_pose_offset_model;
       std::vector<double> initial_pose_offset_model_x;
       std::vector<double> initial_pose_offset_model_y;
@@ -153,6 +154,8 @@ public:
     }
     covariance.covariance_estimation.enable =
       node->declare_parameter<bool>("covariance.covariance_estimation.enable");
+    covariance.covariance_estimation.debug_enable =
+      node->declare_parameter<bool>("covariance.covariance_estimation.debug_enable");
     if (covariance.covariance_estimation.enable) {
       const int64_t covariance_estimation_type_tmp =
         node->declare_parameter<int64_t>("covariance.covariance_estimation.covariance_estimation_type");
