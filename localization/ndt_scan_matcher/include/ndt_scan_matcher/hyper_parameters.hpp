@@ -28,6 +28,12 @@ enum class ConvergedParamType {
   NEAREST_VOXEL_TRANSFORMATION_LIKELIHOOD = 1
 };
 
+enum class CovarianceEstimationType {
+  LAPLACE_APPROXIMATION = 0,
+  MULTI_NDT = 1,
+  MULTI_NDT_SCORE = 2,
+};
+
 struct HyperParameters
 {
   struct Frame
@@ -77,6 +83,7 @@ struct HyperParameters
 
     struct CovarianceEstimation
     {
+      CovarianceEstimationType covariance_estimation_type;
       bool enable;
       std::vector<Eigen::Vector2d> initial_pose_offset_model;
       std::vector<double> initial_pose_offset_model_x;
@@ -147,6 +154,10 @@ public:
     covariance.covariance_estimation.enable =
       node->declare_parameter<bool>("covariance.covariance_estimation.enable");
     if (covariance.covariance_estimation.enable) {
+      const int64_t covariance_estimation_type_tmp =
+        node->declare_parameter<int64_t>("covariance.covariance_estimation.covariance_estimation_type");
+      covariance.covariance_estimation.covariance_estimation_type =
+        static_cast<CovarianceEstimationType>(covariance_estimation_type_tmp);
       covariance.covariance_estimation.initial_pose_offset_model_x =
         node->declare_parameter<std::vector<double>>(
           "covariance.covariance_estimation.initial_pose_offset_model_x");

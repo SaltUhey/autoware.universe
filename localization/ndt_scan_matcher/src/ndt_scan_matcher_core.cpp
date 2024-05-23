@@ -450,45 +450,31 @@ void NDTScanMatcher::callback_sensor_points(
   // ndt_covariance[28]:pitch_cov
   // ndt_covariance[35]:yaw_cov
 
-  //std::cerr << "param_.covariance.covariance_estimation.enable:" << param_.covariance.covariance_estimation.enable << std::endl;
-
   if (is_converged && param_.covariance.covariance_estimation.enable) {
     // const auto estimated_covariance =
     //   estimate_covariance(ndt_result, initial_pose_matrix, sensor_ros_time);
     
-    //laplace------------↓↓↓↓↓↓↓↓↓↓↓
-    // std::cerr << "laplace" << std::endl;
-    // const auto estimated_covariance_laplace = estimate_covariance_laplace(ndt_result, sensor_ros_time);
-    // ndt_covariance = estimated_covariance_laplace;
-    //-------------------↑↑↑↑↑↑↑↑↑↑↑
+    if (param_.covariance.covariance_estimation.covariance_estimation_type == CovarianceEstimationType::LAPLACE_APPROXIMATION){
+      std::cerr << "laplace" << std::endl;
+      const auto estimated_covariance_laplace = estimate_covariance_laplace(ndt_result, sensor_ros_time);
+      ndt_covariance = estimated_covariance_laplace;
+    }
 
-    //estimate_xy_covariance_by_multi_ndt-------↓↓↓↓↓↓↓↓↓↓↓
-    // std::cerr << "multi_ndt" << std::endl;
-    // const std::vector<double> offset_x = {0.0, 0.0, 0.5, -0.5, 1.0, -1.0, 0.0, 0.0, 2.0, -2.0, 0.0, 0.0};
-    // const std::vector<double> offset_y = {0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 2.0, -2.0};
-    // const std::vector<Eigen::Matrix4f> poses_to_search = pclomp::propose_poses_to_search(ndt_result, offset_x, offset_y);
-    // const auto estimated_covariance_multi_ndt = estimate_covariance_multi_ndt(ndt_result, ndt_ptr_, poses_to_search , sensor_ros_time);
-    // ndt_covariance = estimated_covariance_multi_ndt;
-    //------------------------------------------↑↑↑↑↑↑↑↑↑↑↑
+    else if (param_.covariance.covariance_estimation.covariance_estimation_type == CovarianceEstimationType::MULTI_NDT){
+      std::cerr << "multi_ndt" << std::endl;
+      const std::vector<Eigen::Matrix4f> poses_to_search = pclomp::propose_poses_to_search(ndt_result, param_.covariance.covariance_estimation.initial_pose_offset_model_x, param_.covariance.covariance_estimation.initial_pose_offset_model_y);
+      const auto estimated_covariance_multi_ndt = estimate_covariance_multi_ndt(ndt_result, ndt_ptr_, poses_to_search , sensor_ros_time);
+      ndt_covariance = estimated_covariance_multi_ndt;
+    }
 
-    //estimate_xy_covariance_by_multi_ndt_score-------↓↓↓↓↓↓↓↓↓↓↓
-    std::cerr << "multi_ndt_score" << std::endl;
-    //param_.initial_pose_offset_model_x
-    const std::vector<double> offset_x = {0.0, 0.0, 0.5, -0.5, 1.0, -1.0, 0.0, 0.0, 2.0, -2.0, 0.0, 0.0, 3.0, -3.0, 0.0, 0.0, 5.0, -5.0, 0.0, 0.0};
-    const std::vector<double> offset_y = {0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 2.0, -2.0, 0.0, 0.0, 3.0, -3.0, 0.0, 0.0, 5.0, -5.0};
-    const double temperature = 0.1;
-    const std::vector<Eigen::Matrix4f> poses_to_search = pclomp::propose_poses_to_search(ndt_result, param_.covariance.covariance_estimation.initial_pose_offset_model_x, param_.covariance.covariance_estimation.initial_pose_offset_model_y);
-    const auto estimated_covariance_multi_ndt_score = estimate_covariance_multi_ndt_score(ndt_result, ndt_ptr_, poses_to_search, temperature, sensor_ros_time);
-    ndt_covariance = estimated_covariance_multi_ndt_score;
-    //------------------------------------------------↑↑↑↑↑↑↑↑↑↑↑
+    else if (param_.covariance.covariance_estimation.covariance_estimation_type == CovarianceEstimationType::MULTI_NDT_SCORE){
+      std::cerr << "multi_ndt_score" << std::endl;
+      const double temperature = 0.1;
+      const std::vector<Eigen::Matrix4f> poses_to_search = pclomp::propose_poses_to_search(ndt_result, param_.covariance.covariance_estimation.initial_pose_offset_model_x, param_.covariance.covariance_estimation.initial_pose_offset_model_y);
+      const auto estimated_covariance_multi_ndt_score = estimate_covariance_multi_ndt_score(ndt_result, ndt_ptr_, poses_to_search, temperature, sensor_ros_time);
+      ndt_covariance = estimated_covariance_multi_ndt_score;
+    }
 
-    //ndt_covariance = estimated_covariance;
-
-    // std::cerr << "Contents of ndt_covariance:" << std::endl;
-    // for (size_t i = 0; i < ndt_covariance.size(); ++i) {
-    //     std::cerr << "ndt_covariance[" << i << "] = " << ndt_covariance[i] << std::endl;
-    // }
-    
   }
   
 
@@ -872,8 +858,6 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance_laplace(const pclomp:
 
   const Eigen::Matrix2d cov_by_la = pclomp::estimate_xy_covariance_by_Laplace_approximation(ndt_result.hessian);
 
-  // std::cerr << "Contents of cov_by_la:" << std::endl;
-  // std::cerr << cov_by_la << std::endl;
   ndt_covariance[0 + 6 * 0] = cov_by_la(0, 0);
   ndt_covariance[1 + 6 * 1] = cov_by_la(1, 1);
   ndt_covariance[1 + 6 * 0] = cov_by_la(1, 0);
@@ -910,12 +894,6 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance_multi_ndt(
 
   // publish covariance at base_link
   const Eigen::Matrix2d cov_by_mndt_rotated = pclomp::rotate_covariance_to_base_link(cov_by_mndt, ndt_result.pose);
-  // const double x_cov = cov_by_mndt_rotated(0,0);
-  // const double y_cov = cov_by_mndt_rotated(1,1);
-  // std::cerr << "x_cov:" << x_cov << std::endl;
-  // std::cerr << "y_cov:" << y_cov << std::endl;
-  // std::cerr << "非対角成分(1,0)" << cov_by_mndt_rotated(1,0) << std::endl;
-  // std::cerr << "非対角成分(0,1)" << cov_by_mndt_rotated(0,1) << std::endl;
   const double dev_x_by_mndt_rotated =std::sqrt(cov_by_mndt_rotated(0, 0));
   const double dev_y_by_mndt_rotated =std::sqrt(cov_by_mndt_rotated(1, 1));
   ndt_dev_x_pub_->publish(
@@ -930,7 +908,6 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance_multi_ndt(
   tf2::Quaternion tf_quaternion;
   tf_quaternion.setRPY(0, 0, yaw);
   tf2::convert(tf_quaternion, quaternion);
-
   visualization_msgs::msg::Marker marker;
   marker.header.frame_id = param_.frame.map_frame;
   marker.header.stamp = sensor_ros_time;
@@ -971,12 +948,6 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance_multi_ndt_score(
 
   // publish covariance at base_link
   const Eigen::Matrix2d cov_by_mndt_score_rotated = pclomp::rotate_covariance_to_base_link(cov_by_mndt_score, ndt_result.pose);
-  // const double x_cov = cov_by_mndt_score_rotated(0,0);
-  // const double y_cov = cov_by_mndt_score_rotated(1,1);
-  // std::cerr << "x_cov:" << x_cov << std::endl;
-  // std::cerr << "y_cov:" << y_cov << std::endl;
-  // std::cerr << "非対角成分(1,0)" << cov_by_mndt_score_rotated(1,0) << std::endl;
-  // std::cerr << "非対角成分(0,1)" << cov_by_mndt_score_rotated(0,1) << std::endl;
   const double dev_x_by_mndt_score_rotated =std::sqrt(cov_by_mndt_score_rotated(0, 0));
   const double dev_y_by_mndt_score_rotated =std::sqrt(cov_by_mndt_score_rotated(1, 1));
   ndt_dev_x_pub_->publish(
@@ -991,7 +962,6 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance_multi_ndt_score(
   tf2::Quaternion tf_quaternion;
   tf_quaternion.setRPY(0, 0, yaw);
   tf2::convert(tf_quaternion, quaternion);
-
   visualization_msgs::msg::Marker marker;
   marker.header.frame_id = param_.frame.map_frame;
   marker.header.stamp = sensor_ros_time;
