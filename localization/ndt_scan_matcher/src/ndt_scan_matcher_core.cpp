@@ -439,16 +439,7 @@ void NDTScanMatcher::callback_sensor_points(
   std::array<double, 36> ndt_covariance =
     rotate_covariance(param_.covariance.output_pose_covariance, map_to_base_link_rotation);//default
 
-  // std::cerr << "Contents of ndt_covariance(default):" << std::endl;
-  // for (size_t i = 0; i < ndt_covariance.size(); ++i) {
-  //     std::cerr << "ndt_covariance[" << i << "] = " << ndt_covariance[i] << std::endl;
-  // }
-  // ndt_covariance[0]:x_cov
-  // ndt_covariance[7]:y_cov
-  // ndt_covariance[14]:z_cov
-  // ndt_covariance[21]:roll_cov
-  // ndt_covariance[28]:pitch_cov
-  // ndt_covariance[35]:yaw_cov
+ 
 
   if (is_converged && param_.covariance.covariance_estimation.enable) {
     // const auto estimated_covariance =
@@ -474,9 +465,7 @@ void NDTScanMatcher::callback_sensor_points(
       const auto estimated_covariance_multi_ndt_score = estimate_covariance_multi_ndt_score(ndt_result, ndt_ptr_, poses_to_search, temperature, sensor_ros_time);
       ndt_covariance = estimated_covariance_multi_ndt_score;
     }
-
   }
-  
 
   const auto exe_end_time = std::chrono::system_clock::now();
   const auto duration_micro_sec =
@@ -855,26 +844,52 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance(
 std::array<double, 36> NDTScanMatcher::estimate_covariance_laplace(const pclomp::NdtResult & ndt_result, const rclcpp::Time & sensor_ros_time)
 {
   std::array<double, 36> ndt_covariance = param_.covariance.output_pose_covariance;
-
-  const Eigen::Matrix2d cov_by_la = pclomp::estimate_xy_covariance_by_Laplace_approximation(ndt_result.hessian);
-
-  ndt_covariance[0 + 6 * 0] = cov_by_la(0, 0);
-  ndt_covariance[1 + 6 * 1] = cov_by_la(1, 1);
-  ndt_covariance[1 + 6 * 0] = cov_by_la(1, 0);
-  ndt_covariance[0 + 6 * 1] = cov_by_la(0, 1);
+  Eigen::Matrix2d cov_by_la = pclomp::estimate_xy_covariance_by_Laplace_approximation(ndt_result.hessian);
+  const int scale = 10;
+  cov_by_la *= scale;
+  const Eigen::Matrix2d cov_by_la_adjust = pclomp::adjust_diagonal_covariance(cov_by_la, ndt_result.pose, 0.0225, 0.0225);
+  ndt_covariance[0 + 6 * 0] = cov_by_la_adjust(0, 0);
+  ndt_covariance[1 + 6 * 1] = cov_by_la_adjust(1, 1);
+  ndt_covariance[1 + 6 * 0] = cov_by_la_adjust(1, 0);
+  ndt_covariance[0 + 6 * 1] = cov_by_la_adjust(0, 1);
 
   //publish covariance at base_link
-  const Eigen::Matrix2d cov_by_la_rotated = pclomp::rotate_covariance_to_base_link(cov_by_la, ndt_result.pose);
-  const double x_cov = cov_by_la_rotated(0,0);
-  const double y_cov = cov_by_la_rotated(1,1);
-  std::cerr << "x_cov:" << x_cov << std::endl;
-  std::cerr << "y_cov:" << y_cov << std::endl;
-  std::cerr << "非対角成分(1,0)" << cov_by_la_rotated(1,0) << std::endl;
-  std::cerr << "非対角成分(0,1)" << cov_by_la_rotated(0,1) << std::endl;
+  const Eigen::Matrix2d cov_by_la_rotated = pclomp::rotate_covariance_to_base_link(cov_by_la_adjust, ndt_result.pose);
+  const double dev_x_by_laplace_rotated = std::sqrt(cov_by_la_rotated(0,0));
+  const double dev_y_by_laplace_rotated = std::sqrt(cov_by_la_rotated(1,1));
   ndt_dev_x_pub_->publish(
-    make_float32_stamped(sensor_ros_time, cov_by_la_rotated(0, 0)));
+    make_float32_stamped(sensor_ros_time, dev_x_by_laplace_rotated));
   ndt_dev_y_pub_->publish(
-    make_float32_stamped(sensor_ros_time, cov_by_la_rotated(1, 1)));
+    make_float32_stamped(sensor_ros_time, dev_y_by_laplace_rotated));
+  
+  //display ndt cov markers
+  const Eigen::Matrix2d rot = ndt_result.pose.topLeftCorner<2, 2>().cast<double>();
+  double yaw = std::atan2(rot(1, 0), rot(0, 0));
+  geometry_msgs::msg::Quaternion quaternion;
+  tf2::Quaternion tf_quaternion;
+  tf_quaternion.setRPY(0, 0, yaw);
+  tf2::convert(tf_quaternion, quaternion);
+  visualization_msgs::msg::Marker marker;
+  marker.header.frame_id = param_.frame.map_frame;
+  marker.header.stamp = sensor_ros_time;
+  marker.ns = "sphepe";
+  marker.id = id_++;
+  marker.type = visualization_msgs::msg::Marker::SPHERE;
+  marker.action = visualization_msgs::msg::Marker::ADD;
+  marker.pose.position.x = ndt_result.pose(0,3);
+  marker.pose.position.y = ndt_result.pose(1,3);
+  marker.pose.position.z = ndt_result.pose(2,3);
+  marker.pose.orientation = quaternion;
+  marker.scale.x = cov_scale_*2*dev_x_by_laplace_rotated;
+  marker.scale.y = cov_scale_*2*dev_y_by_laplace_rotated;
+  marker.scale.z = cov_scale_*2*std::sqrt(ndt_covariance[14]);
+  marker.color.r = 1.0;
+  marker.color.g = 0.0;
+  marker.color.b = 1.0;
+  marker.color.a = 0.4;
+  marker.lifetime = rclcpp::Duration::from_seconds(30.0);
+  ndt_dev_marker_array.markers.push_back(marker);
+  ndt_dev_marker_pub_->publish(ndt_dev_marker_array);
 
   return ndt_covariance;
 }
@@ -901,7 +916,7 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance_multi_ndt(
   ndt_dev_y_pub_->publish(
     make_float32_stamped(sensor_ros_time, dev_y_by_mndt_rotated));
 
-  //display ndt cov 
+  //display ndt cov markers
   const Eigen::Matrix2d rot = ndt_result.pose.topLeftCorner<2, 2>().cast<double>();
   double yaw = std::atan2(rot(1, 0), rot(0, 0));
   geometry_msgs::msg::Quaternion quaternion;
@@ -955,7 +970,7 @@ std::array<double, 36> NDTScanMatcher::estimate_covariance_multi_ndt_score(
   ndt_dev_y_pub_->publish(
     make_float32_stamped(sensor_ros_time, dev_y_by_mndt_score_rotated));
 
-  //display ndt cov 
+  //display ndt cov markers
   const Eigen::Matrix2d rot = ndt_result.pose.topLeftCorner<2, 2>().cast<double>();
   double yaw = std::atan2(rot(1, 0), rot(0, 0));
   geometry_msgs::msg::Quaternion quaternion;
